@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: hfms-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-hfms_prod}
+      MYSQL_USER: ${DB_USERNAME:-hfms_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change_me_root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - hfms-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-change_me_root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hfms-app
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      HFMS_PROFILE: prod
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-hfms_prod}
+      DB_USERNAME: ${DB_USERNAME:-hfms_user}
+      DB_PASSWORD: ${DB_PASSWORD:-change_me}
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - hfms-documents:/app/data/documents
+      - hfms-invoices:/app/data/invoices
+      - hfms-backups:/app/data/backups
+      - hfms-logs:/var/log/hfms
+
+volumes:
+  hfms-mysql-data:
+  hfms-documents:
+  hfms-invoices:
+  hfms-backups:
+  hfms-logs:

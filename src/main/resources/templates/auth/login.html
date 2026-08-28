@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Login')}"></head>
+<body>
+
+<div class="container-fluid" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #1e2a38;">
+    <div class="row w-100 justify-content-center">
+        <div class="col-11 col-sm-8 col-md-5 col-lg-4">
+            <div class="text-center mb-4">
+                <span class="text-white fs-3 fw-semibold"><i class="bi bi-mortarboard-fill me-2"></i>HopeStar HFMS</span>
+            </div>
+            <div class="card hfms-card">
+                <div class="card-body p-4">
+                    <h5 class="card-title mb-3">Sign in</h5>
+
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${errorMessage != null}">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i><span th:text="${errorMessage}">Error</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${successMessage != null}">
+                        <i class="bi bi-check-circle-fill me-1"></i><span th:text="${successMessage}">Success</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form method="post" th:action="@{/login}">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   autocomplete="username" required autofocus/>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   autocomplete="current-password" required/>
+                        </div>
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

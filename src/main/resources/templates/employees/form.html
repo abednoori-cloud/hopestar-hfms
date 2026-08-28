@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${isEdit} ? 'Edit Employee' : 'New Employee')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Employees', url: '/employees'},
+    {label: ${isEdit} ? 'Edit Employee' : 'New Employee', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="card hfms-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0" th:if="${!isEdit}"><i class="bi bi-person-plus me-2"></i>New Employee</h5>
+                    <h5 class="mb-0" th:if="${isEdit}">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Employee
+                        <span class="text-muted fs-6" th:text="'(' + ${employeeCode} + ')'"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <form th:if="${!isEdit}" method="post" th:action="@{/employees}"
+                          th:object="${employeeCreateDTO}" novalidate>
+                        <div th:replace="~{this :: fields}"></div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/employees}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Employee</button>
+                        </div>
+                    </form>
+
+                    <form th:if="${isEdit}" method="post" th:action="@{/employees/{id}(id=${employeeId})}"
+                          th:object="${employeeUpdateDTO}" novalidate>
+                        <div th:replace="~{this :: fields}"></div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/employees/{id}(id=${employeeId})}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD (see MoneyUtil.resolveExchangeRateToUsd, the single shared
+    // implementation of this rule used identically by EmployeeServiceImpl,
+    // StudentContractServiceImpl, StudentPaymentServiceImpl, and
+    // LedgerServiceImpl).
+    document.querySelectorAll('.currency-select').forEach(function (select) {
+        var form = select.closest('form');
+        var rateInput = form.querySelector('.exchange-rate-input');
+        function syncRate() {
+            if (select.value === 'USD') {
+                rateInput.value = '1';
+                rateInput.setAttribute('readonly', 'readonly');
+            } else {
+                rateInput.removeAttribute('readonly');
+            }
+        }
+        select.addEventListener('change', syncRate);
+        syncRate();
+    });
+</script>
+</body>
+
+<!-- Shared field markup, included into whichever form (create/edit) is active above via th:replace="~{this :: fields}" -->
+<th:block th:fragment="fields">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label class="form-label">Full Name *</label>
+            <input type="text" class="form-control" th:field="*{fullName}"
+                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Father's Name</label>
+            <input type="text" class="form-control" th:field="*{fatherName}"/>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Gender *</label>
+            <select class="form-select" th:field="*{gender}"
+                    th:classappend="${#fields.hasErrors('gender')} ? 'is-invalid'">
+                <option value="">Select…</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+            </select>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Date of Birth</label>
+            <input type="date" class="form-control" th:field="*{dateOfBirth}"
+                   th:classappend="${#fields.hasErrors('dateOfBirth')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('dateOfBirth')}" th:errors="*{dateOfBirth}"></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Phone</label>
+            <input type="text" class="form-control" th:field="*{phone}"/>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" th:field="*{email}"
+                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">National ID</label>
+            <input type="text" class="form-control" th:field="*{nationalId}"/>
+        </div>
+        <div class="col-md-8">
+            <label class="form-label">Address</label>
+            <input type="text" class="form-control" th:field="*{address}"/>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Position *</label>
+            <input type="text" class="form-control" th:field="*{position}"
+                   th:classappend="${#fields.hasErrors('position')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('position')}" th:errors="*{position}"></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Department *</label>
+            <input type="text" class="form-control" th:field="*{department}"
+                   th:classappend="${#fields.hasErrors('department')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('department')}" th:errors="*{department}"></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Joining Date *</label>
+            <input type="date" class="form-control" th:field="*{joiningDate}"
+                   th:classappend="${#fields.hasErrors('joiningDate')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('joiningDate')}" th:errors="*{joiningDate}"></div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">Employment Status *</label>
+            <select class="form-select" th:field="*{employmentStatusId}"
+                    th:classappend="${#fields.hasErrors('employmentStatusId')} ? 'is-invalid'">
+                <option value="">Select a status…</option>
+                <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"></option>
+            </select>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('employmentStatusId')}" th:errors="*{employmentStatusId}"></div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Base Salary *</label>
+            <input type="number" step="0.01" min="0" class="form-control" th:field="*{baseSalary}"
+                   th:classappend="${#fields.hasErrors('baseSalary')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('baseSalary')}" th:errors="*{baseSalary}"></div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Currency *</label>
+            <select class="form-select currency-select" th:field="*{salaryCurrency}"
+                    th:classappend="${#fields.hasErrors('salaryCurrency')} ? 'is-invalid'">
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="AFN">AFN</option>
+            </select>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('salaryCurrency')}" th:errors="*{salaryCurrency}"></div>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Rate to USD *</label>
+            <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                   th:field="*{exchangeRateToUsd}"
+                   th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+            <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+        </div>
+
+        <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" rows="3" th:field="*{notes}"></textarea>
+        </div>
+    </div>
+</th:block>
+</html>

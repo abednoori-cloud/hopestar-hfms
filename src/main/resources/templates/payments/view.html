@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${payment.paymentNumber})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Payments', url: '/payments'},
+    {label: ${payment.paymentNumber}, url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-0" th:text="${payment.paymentNumber}">PAY-2026-000001</h4>
+            <span class="text-muted">Receipt <span th:text="${payment.receiptNumber}"></span></span>
+            <span class="badge ms-2"
+                  th:classappend="${payment.status.name() == 'POSTED'} ? 'bg-success' : (${payment.status.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger')"
+                  th:text="${payment.status}"></span>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/students/{id}(id=${payment.studentId})}">
+                <i class="bi bi-person me-1"></i>View Student
+            </a>
+            <a class="btn btn-outline-secondary" th:href="@{/students/{id}/payments(id=${payment.studentId})}">
+                <i class="bi bi-clock-history me-1"></i>Payment History
+            </a>
+
+            <a th:if="${payment.status.name() == 'DRAFT'}" class="btn btn-outline-primary"
+               th:href="@{/payments/{id}/edit(id=${payment.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit Draft
+            </a>
+            <form th:if="${payment.status.name() == 'DRAFT'}" class="d-inline" method="post"
+                  th:action="@{/payments/{id}/post(id=${payment.id})}"
+                  onsubmit="return confirm('Post this payment to the ledger? This cannot be undone.');">
+                <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i>Post Payment</button>
+            </form>
+
+            <button th:if="${payment.status.name() == 'DRAFT' or payment.status.name() == 'POSTED'}"
+                    type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                <i class="bi bi-x-circle me-1"></i>Cancel
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Payment Details</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Student</dt>
+                        <dd class="col-sm-8">
+                            <a th:href="@{/students/{id}(id=${payment.studentId})}" th:text="${payment.studentFullName}"></a>
+                            (<span th:text="${payment.studentCode}"></span>)
+                        </dd>
+
+                        <dt class="col-sm-4">Contract</dt>
+                        <dd class="col-sm-8">
+                            <a th:href="@{/students/{id}/contracts(id=${payment.studentId})}" th:text="'Contract #' + ${payment.contractId}"></a>
+                        </dd>
+
+                        <dt class="col-sm-4">Payment Date</dt>
+                        <dd class="col-sm-8" th:text="${#temporals.format(payment.paymentDate, 'dd MMM yyyy')}"></dd>
+
+                        <dt class="col-sm-4">Payment Method</dt>
+                        <dd class="col-sm-8" th:text="${payment.paymentMethod.name}"></dd>
+
+                        <dt class="col-sm-4">Reference Number</dt>
+                        <dd class="col-sm-8" th:text="${payment.referenceNumber ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Notes</dt>
+                        <dd class="col-sm-8" th:text="${payment.notes ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Ledger Transaction</dt>
+                        <dd class="col-sm-8">
+                            <span th:if="${payment.transactionCode != null}" th:text="${payment.transactionCode}"></span>
+                            <span th:unless="${payment.transactionCode != null}" class="text-muted">Not yet posted</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Amounts</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Original Amount</dt>
+                        <dd class="col-sm-6 text-end">
+                            <span th:text="${payment.currency.code} + ' ' + ${#numbers.formatDecimal(payment.originalAmount, 1, 2)}"></span>
+                        </dd>
+
+                        <dt class="col-sm-6">Exchange Rate to USD</dt>
+                        <dd class="col-sm-6 text-end" th:text="${#numbers.formatDecimal(payment.exchangeRateToUsd, 1, 6)}"></dd>
+
+                        <dt class="col-sm-6">USD Equivalent</dt>
+                        <dd class="col-sm-6 text-end">
+                            <strong th:text="'USD ' + ${#numbers.formatDecimal(payment.usdEquivalentAmount, 1, 2)}"></strong>
+                        </dd>
+
+                        <dt class="col-sm-6 border-top pt-2 mt-2">Contract Remaining Balance</dt>
+                        <dd class="col-sm-6 text-end border-top pt-2 mt-2">
+                            <span th:text="'USD ' + ${#numbers.formatDecimal(payment.contractRemainingBalance, 1, 2)}"></span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Cancel confirmation modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/payments/{id}/cancel(id=${payment.id})}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Cancel Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will cancel payment <strong th:text="${payment.paymentNumber}"></strong>.
+                        <span th:if="${payment.status.name() == 'POSTED'}">The linked ledger transaction will also be voided.</span>
+                    </p>
+                    <label class="form-label">Reason (optional)</label>
+                    <input type="text" class="form-control" name="reason"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Confirm Cancel</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

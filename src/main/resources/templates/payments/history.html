@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Payment History - ' + ${student.fullName})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Students', url: '/students'},
+    {label: ${student.studentCode}, url: '/students/' + ${student.id}},
+    {label: 'Payment History', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Payment History — <span th:text="${student.fullName}"></span></h4>
+        <div>
+            <a class="btn btn-primary" th:href="@{/payments/new(studentId=${student.id})}">
+                <i class="bi bi-plus-lg me-1"></i>Record Payment
+            </a>
+            <a class="btn btn-outline-secondary" th:href="@{/students/{id}(id=${student.id})}">
+                <i class="bi bi-arrow-left me-1"></i>Back to Student
+            </a>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Payment #</th>
+                        <th>Receipt #</th>
+                        <th>Date</th>
+                        <th>Original Amount</th>
+                        <th>Rate</th>
+                        <th>USD Equivalent</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${payments.isEmpty()}">
+                        <td colspan="9" class="text-center text-muted py-4">No payments recorded for this student yet.</td>
+                    </tr>
+                    <tr th:each="payment : ${payments}">
+                        <td><a th:href="@{/payments/{id}(id=${payment.id})}" th:text="${payment.paymentNumber}"></a></td>
+                        <td th:text="${payment.receiptNumber}"></td>
+                        <td th:text="${#temporals.format(payment.paymentDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="${payment.currency.code} + ' ' + ${#numbers.formatDecimal(payment.originalAmount, 1, 2)}"></td>
+                        <td th:text="${#numbers.formatDecimal(payment.exchangeRateToUsd, 1, 6)}"></td>
+                        <td><strong th:text="'USD ' + ${#numbers.formatDecimal(payment.usdEquivalentAmount, 1, 2)}"></strong></td>
+                        <td th:text="${payment.paymentMethod.name}"></td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${payment.status.name() == 'POSTED'} ? 'bg-success' : (${payment.status.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger')"
+                                  th:text="${payment.status}"></span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/payments/{id}(id=${payment.id})}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${salary.salaryNumber})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Salaries', url: '/salaries'},
+    {label: ${salary.salaryNumber}, url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-0" th:text="${salary.salaryNumber}">SAL-2026-000001</h4>
+            <span class="text-muted" th:text="${salary.employeeFullName} + ' — ' + ${salary.month} + '/' + ${salary.year}"></span>
+            <span class="badge ms-2"
+                  th:classappend="${salary.paymentStatus.name() == 'POSTED'} ? 'bg-success' : (${salary.paymentStatus.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger')"
+                  th:text="${salary.paymentStatus}"></span>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/employees/{id}(id=${salary.employeeId})}">
+                <i class="bi bi-person me-1"></i>View Employee
+            </a>
+
+            <a th:if="${salary.paymentStatus.name() == 'DRAFT'}" class="btn btn-outline-primary"
+               th:href="@{/salaries/{id}/edit(id=${salary.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit Draft
+            </a>
+            <form th:if="${salary.paymentStatus.name() == 'DRAFT'}" class="d-inline" method="post"
+                  th:action="@{/salaries/{id}/post(id=${salary.id})}"
+                  onsubmit="return confirm('Post this salary to the ledger as an expense? This cannot be undone.');">
+                <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i>Post Salary</button>
+            </form>
+
+            <button th:if="${salary.paymentStatus.name() == 'DRAFT' or salary.paymentStatus.name() == 'POSTED'}"
+                    type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>Void
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Salary Details</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Employee</dt>
+                        <dd class="col-sm-8">
+                            <a th:href="@{/employees/{id}(id=${salary.employeeId})}" th:text="${salary.employeeFullName}"></a>
+                            (<span th:text="${salary.employeeCode}"></span>) — <span th:text="${salary.employeeDepartment}"></span>
+                        </dd>
+
+                        <dt class="col-sm-4">Period</dt>
+                        <dd class="col-sm-8" th:text="${salary.month} + '/' + ${salary.year}"></dd>
+
+                        <dt class="col-sm-4">Payment Method</dt>
+                        <dd class="col-sm-8" th:text="${salary.paymentMethod.name}"></dd>
+
+                        <dt class="col-sm-4">Payment Date</dt>
+                        <dd class="col-sm-8"
+                            th:text="${salary.paymentDate != null ? #temporals.format(salary.paymentDate, 'dd MMM yyyy') : '—'}"></dd>
+
+                        <dt class="col-sm-4">Remarks</dt>
+                        <dd class="col-sm-8" th:text="${salary.remarks ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Ledger Transaction</dt>
+                        <dd class="col-sm-8">
+                            <span th:if="${salary.ledgerTransactionCode != null}" th:text="${salary.ledgerTransactionCode}"></span>
+                            <span th:unless="${salary.ledgerTransactionCode != null}" class="text-muted">Not yet posted</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Earnings &amp; Deductions</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">Basic Salary</dt>
+                        <dd class="col-sm-5 text-end" th:text="${salary.currency} + ' ' + ${#numbers.formatDecimal(salary.basicSalary, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Bonus</dt>
+                        <dd class="col-sm-5 text-end" th:text="'+ ' + ${#numbers.formatDecimal(salary.bonus, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Overtime</dt>
+                        <dd class="col-sm-5 text-end" th:text="'+ ' + ${#numbers.formatDecimal(salary.overtimeAmount, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Allowance</dt>
+                        <dd class="col-sm-5 text-end" th:text="'+ ' + ${#numbers.formatDecimal(salary.allowance, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Penalty</dt>
+                        <dd class="col-sm-5 text-end text-danger" th:text="'- ' + ${#numbers.formatDecimal(salary.penalty, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Loan Deduction</dt>
+                        <dd class="col-sm-5 text-end text-danger" th:text="'- ' + ${#numbers.formatDecimal(salary.loanDeduction, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Advance Deduction</dt>
+                        <dd class="col-sm-5 text-end text-danger" th:text="'- ' + ${#numbers.formatDecimal(salary.advanceDeduction, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Other Deduction</dt>
+                        <dd class="col-sm-5 text-end text-danger" th:text="'- ' + ${#numbers.formatDecimal(salary.otherDeduction, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7 border-top pt-2 mt-2">Net Salary</dt>
+                        <dd class="col-sm-5 text-end border-top pt-2 mt-2">
+                            <strong th:text="${salary.currency} + ' ' + ${#numbers.formatDecimal(salary.netSalary, 1, 2)}"></strong>
+                        </dd>
+
+                        <dt class="col-sm-7">Exchange Rate to USD</dt>
+                        <dd class="col-sm-5 text-end" th:text="${#numbers.formatDecimal(salary.exchangeRateToUsd, 1, 6)}"></dd>
+
+                        <dt class="col-sm-7">Basic Salary (USD)</dt>
+                        <dd class="col-sm-5 text-end" th:text="'USD ' + ${#numbers.formatDecimal(salary.usdEquivalentSalary, 1, 2)}"></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Void confirmation modal -->
+<div class="modal fade" id="voidModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/salaries/{id}/void(id=${salary.id})}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Void Salary</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will void salary <strong th:text="${salary.salaryNumber}"></strong>.
+                        <span th:if="${salary.paymentStatus.name() == 'POSTED'}">The linked ledger transaction will also be voided.</span>
+                    </p>
+                    <label class="form-label">Reason (optional)</label>
+                    <input type="text" class="form-control" name="reason"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Confirm Void</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${loan.loanNumber})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Loans', url: '/loans'},
+    {label: ${loan.loanNumber}, url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-0" th:text="${loan.loanNumber}">LOAN-2026-000001</h4>
+            <span class="text-muted" th:text="${loan.employeeFullName}"></span>
+            <span class="badge ms-2"
+                  th:classappend="${loan.status.name() == 'ACTIVE'} ? 'bg-primary' : (${loan.status.name() == 'CLOSED'} ? 'bg-success' : (${loan.status.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger'))"
+                  th:text="${loan.status}"></span>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/employees/{id}(id=${loan.employeeId})}">
+                <i class="bi bi-person me-1"></i>View Employee
+            </a>
+
+            <a th:if="${loan.status.name() == 'DRAFT'}" class="btn btn-outline-primary"
+               th:href="@{/loans/{id}/edit(id=${loan.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit Draft
+            </a>
+
+            <button th:if="${loan.status.name() == 'DRAFT'}"
+                    type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#disburseModal">
+                <i class="bi bi-cash-coin me-1"></i>Disburse
+            </button>
+
+            <a th:if="${loan.status.name() == 'ACTIVE' or loan.status.name() == 'CLOSED'}"
+               class="btn btn-outline-secondary" th:href="@{/loans/{id}/repayments(id=${loan.id})}">
+                <i class="bi bi-list-check me-1"></i>Repayment Schedule
+            </a>
+
+            <button th:if="${loan.status.name() == 'DRAFT' or loan.status.name() == 'ACTIVE'}"
+                    type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#voidModal">
+                <i class="bi bi-x-circle me-1"></i>Void
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Loan Details</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Employee</dt>
+                        <dd class="col-sm-8">
+                            <a th:href="@{/employees/{id}(id=${loan.employeeId})}" th:text="${loan.employeeFullName}"></a>
+                            (<span th:text="${loan.employeeCode}"></span>)
+                        </dd>
+
+                        <dt class="col-sm-4">Loan Date</dt>
+                        <dd class="col-sm-8" th:text="${#temporals.format(loan.loanDate, 'dd MMM yyyy')}"></dd>
+
+                        <dt class="col-sm-4">Repayment Period</dt>
+                        <dd class="col-sm-8" th:text="${loan.startMonth} + '/' + ${loan.startYear} + ' — ' + ${loan.endMonth} + '/' + ${loan.endYear}"></dd>
+
+                        <dt class="col-sm-4">Remarks</dt>
+                        <dd class="col-sm-8" th:text="${loan.remarks ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Ledger Transaction</dt>
+                        <dd class="col-sm-8">
+                            <span th:if="${loan.ledgerTransactionCode != null}" th:text="${loan.ledgerTransactionCode}"></span>
+                            <span th:unless="${loan.ledgerTransactionCode != null}" class="text-muted">Not yet disbursed</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card hfms-card mb-3" th:if="${loan.status.name() == 'ACTIVE'}">
+                <div class="card-header bg-white"><strong>Record a Repayment</strong></div>
+                <div class="card-body">
+                    <form method="post" th:action="@{/loans/{id}/repayments(id=${loan.id})}" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Repayment Date *</label>
+                            <input type="date" class="form-control" name="repaymentDate" required/>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Amount *</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" name="amount" required/>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Currency *</label>
+                            <select class="form-select currency-select" name="currency" required>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="AFN">AFN</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Rate to USD *</label>
+                            <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                   name="exchangeRateToUsd" value="1" required/>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Payment Method *</label>
+                            <select class="form-select" name="paymentMethodId" required>
+                                <option value="">Select…</option>
+                                <option th:each="method : ${paymentMethods}" th:value="${method.id}" th:text="${method.name}"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label">Notes</label>
+                            <input type="text" class="form-control" name="notes"/>
+                        </div>
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Record Repayment</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Amounts</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-7">Loan Amount</dt>
+                        <dd class="col-sm-5 text-end" th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.loanAmount, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Exchange Rate to USD</dt>
+                        <dd class="col-sm-5 text-end" th:text="${#numbers.formatDecimal(loan.exchangeRateToUsd, 1, 6)}"></dd>
+
+                        <dt class="col-sm-7">Loan Amount (USD)</dt>
+                        <dd class="col-sm-5 text-end" th:text="'USD ' + ${#numbers.formatDecimal(loan.usdEquivalentAmount, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7">Monthly Deduction</dt>
+                        <dd class="col-sm-5 text-end" th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.monthlyDeduction, 1, 2)}"></dd>
+
+                        <dt class="col-sm-7 border-top pt-2 mt-2">Remaining Balance</dt>
+                        <dd class="col-sm-5 text-end border-top pt-2 mt-2">
+                            <strong class="fs-5" th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.remainingBalance, 1, 2)}"></strong>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Disburse modal -->
+<div class="modal fade" id="disburseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/loans/{id}/disburse(id=${loan.id})}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Disburse Loan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will post loan <strong th:text="${loan.loanNumber}"></strong>
+                        (<span th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.loanAmount, 1, 2)}"></span>)
+                        as an expense transaction and activate it.</p>
+                    <label class="form-label">Payment Method *</label>
+                    <select class="form-select" name="paymentMethodId" required>
+                        <option value="">Select…</option>
+                        <option th:each="method : ${paymentMethods}" th:value="${method.id}" th:text="${method.name}"></option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Confirm Disbursement</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Void confirmation modal -->
+<div class="modal fade" id="voidModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/loans/{id}/void(id=${loan.id})}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Void Loan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will void loan <strong th:text="${loan.loanNumber}"></strong>.
+                        <span th:if="${loan.status.name() == 'ACTIVE'}">The linked ledger transaction will also be voided.</span>
+                    </p>
+                    <label class="form-label">Reason (optional)</label>
+                    <input type="text" class="form-control" name="reason"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Confirm Void</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD (see MoneyUtil.resolveExchangeRateToUsd, the single shared
+    // implementation used identically by every module).
+    document.querySelectorAll('.currency-select').forEach(function (select) {
+        var form = select.closest('form');
+        var rateInput = form.querySelector('.exchange-rate-input');
+        function syncRate() {
+            if (select.value === 'USD') {
+                rateInput.value = '1';
+                rateInput.setAttribute('readonly', 'readonly');
+            } else {
+                rateInput.removeAttribute('readonly');
+            }
+        }
+        select.addEventListener('change', syncRate);
+        syncRate();
+    });
+</script>
+</body>
+</html>

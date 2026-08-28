@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${isEdit} ? 'Edit Payment' : 'Record Payment')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Payments', url: '/payments'},
+    {label: ${isEdit} ? 'Edit Payment' : 'Record Payment', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card hfms-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0" th:if="${!isEdit}"><i class="bi bi-cash-coin me-2"></i>Record Payment</h5>
+                    <h5 class="mb-0" th:if="${isEdit}">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Draft Payment
+                        <span class="text-muted fs-6" th:text="'(' + ${payment.paymentNumber} + ')'"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <!-- CREATE -->
+                    <form th:if="${!isEdit}" method="post" th:action="@{/payments}" th:object="${createDTO}" novalidate>
+
+                        <div class="row g-3 mb-1" th:if="${selectedStudent != null}">
+                            <div class="col-md-6">
+                                <label class="form-label">Student</label>
+                                <input type="text" class="form-control" readonly
+                                       th:value="${selectedStudent.fullName} + ' (' + ${selectedStudent.studentCode} + ')'"/>
+                                <input type="hidden" th:field="*{studentId}"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contract *</label>
+                                <select class="form-select" th:field="*{contractId}"
+                                        th:classappend="${#fields.hasErrors('contractId')} ? 'is-invalid'">
+                                    <option value="">Select a contract…</option>
+                                    <option th:each="contract : ${studentContracts}" th:value="${contract.id}"
+                                            th:text="${contract.program.name} + ' — ' + ${contract.currencyCode} + ' ' + ${#numbers.formatDecimal(contract.finalAmount, 1, 2)} + ' (remaining USD ' + ${#numbers.formatDecimal(contract.remainingBalance, 1, 2)} + ')'"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('contractId')}" th:errors="*{contractId}"></div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-1" th:if="${selectedStudent == null}">
+                            <div class="col-md-6">
+                                <label class="form-label">Student ID *</label>
+                                <input type="number" class="form-control" th:field="*{studentId}"
+                                       th:classappend="${#fields.hasErrors('studentId')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('studentId')}" th:errors="*{studentId}"></div>
+                                <div class="form-text">Tip: open this form from a student's Contracts page to have this filled in automatically.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contract ID *</label>
+                                <input type="number" class="form-control" th:field="*{contractId}"
+                                       th:classappend="${#fields.hasErrors('contractId')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('contractId')}" th:errors="*{contractId}"></div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-4">
+                                <label class="form-label">Payment Date *</label>
+                                <input type="date" class="form-control" th:field="*{paymentDate}"
+                                       th:classappend="${#fields.hasErrors('paymentDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('paymentDate')}" th:errors="*{paymentDate}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Original Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{originalAmount}"
+                                       th:classappend="${#fields.hasErrors('originalAmount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('originalAmount')}" th:errors="*{originalAmount}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currencyCode}"
+                                        th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                                    <option th:each="currency : ${currencies}" th:value="${currency.code}" th:text="${currency.code} + ' - ' + ${currency.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Exchange Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Payment Method *</label>
+                                <select class="form-select" th:field="*{paymentMethodId}"
+                                        th:classappend="${#fields.hasErrors('paymentMethodId')} ? 'is-invalid'">
+                                    <option value="">Select…</option>
+                                    <option th:each="method : ${paymentMethods}" th:value="${method.id}" th:text="${method.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('paymentMethodId')}" th:errors="*{paymentMethodId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Reference Number</label>
+                                <input type="text" class="form-control" th:field="*{referenceNumber}"/>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" rows="2" th:field="*{notes}"></textarea>
+                            </div>
+                            <div class="col-12 form-check mt-2">
+                                <input type="checkbox" class="form-check-input" id="saveAsDraft" th:field="*{saveAsDraft}"/>
+                                <label class="form-check-label" for="saveAsDraft">
+                                    Save as draft (do not post to the ledger yet — you can finalize it later)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/payments}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Record Payment</button>
+                        </div>
+                    </form>
+
+                    <!-- EDIT DRAFT -->
+                    <form th:if="${isEdit}" method="post" th:action="@{/payments/{id}(id=${paymentId})}" th:object="${updateDTO}" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Student</label>
+                                <input type="text" class="form-control" readonly
+                                       th:value="${payment.studentFullName} + ' (' + ${payment.studentCode} + ')'"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Contract</label>
+                                <input type="text" class="form-control" readonly th:value="'Contract #' + ${payment.contractId}"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Payment Date *</label>
+                                <input type="date" class="form-control" th:field="*{paymentDate}"
+                                       th:classappend="${#fields.hasErrors('paymentDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('paymentDate')}" th:errors="*{paymentDate}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Original Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{originalAmount}"
+                                       th:classappend="${#fields.hasErrors('originalAmount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('originalAmount')}" th:errors="*{originalAmount}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currencyCode}"
+                                        th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                                    <option th:each="currency : ${currencies}" th:value="${currency.code}" th:text="${currency.code} + ' - ' + ${currency.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Exchange Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Payment Method *</label>
+                                <select class="form-select" th:field="*{paymentMethodId}"
+                                        th:classappend="${#fields.hasErrors('paymentMethodId')} ? 'is-invalid'">
+                                    <option value="">Select…</option>
+                                    <option th:each="method : ${paymentMethods}" th:value="${method.id}" th:text="${method.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('paymentMethodId')}" th:errors="*{paymentMethodId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Reference Number</label>
+                                <input type="text" class="form-control" th:field="*{referenceNumber}"/>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" rows="2" th:field="*{notes}"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/payments/{id}(id=${paymentId})}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD (see MoneyUtil.resolveExchangeRateToUsd, used identically by
+    // StudentPaymentServiceImpl and LedgerServiceImpl).
+    document.querySelectorAll('.currency-select').forEach(function (select) {
+        var form = select.closest('form');
+        var rateInput = form.querySelector('.exchange-rate-input');
+        function syncRate() {
+            if (select.value === 'USD') {
+                rateInput.value = '1';
+                rateInput.setAttribute('readonly', 'readonly');
+            } else {
+                rateInput.removeAttribute('readonly');
+            }
+        }
+        select.addEventListener('change', syncRate);
+        syncRate();
+    });
+</script>
+</body>
+</html>

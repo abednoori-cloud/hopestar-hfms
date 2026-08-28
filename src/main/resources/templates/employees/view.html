@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${employee.fullName})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Employees', url: '/employees'},
+    {label: ${employee.employeeCode}, url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-0" th:text="${employee.fullName}">Employee Name</h4>
+            <span class="text-muted" th:text="${employee.employeeCode}">EMP-2026-000001</span>
+            <span class="badge ms-2" th:classappend="${employee.active} ? 'badge-status-active' : 'badge-status-inactive'"
+                  th:text="${employee.employmentStatus.name}"></span>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/employees/{id}/edit(id=${employee.id})}">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <a class="btn btn-outline-primary" th:href="@{/salaries/new(employeeId=${employee.id})}">
+                <i class="bi bi-cash-stack me-1"></i>New Salary
+            </a>
+            <a class="btn btn-outline-primary" th:href="@{/loans/new(employeeId=${employee.id})}">
+                <i class="bi bi-piggy-bank me-1"></i>New Loan
+            </a>
+            <form th:if="${employee.active}" class="d-inline" method="post"
+                  th:action="@{/employees/{id}/deactivate(id=${employee.id})}"
+                  onsubmit="return confirm('Deactivate this employee? They can be reactivated later.');">
+                <button type="submit" class="btn btn-outline-danger"><i class="bi bi-slash-circle me-1"></i>Deactivate</button>
+            </form>
+            <form th:unless="${employee.active}" class="d-inline" method="post"
+                  th:action="@{/employees/{id}/reactivate(id=${employee.id})}">
+                <button type="submit" class="btn btn-outline-success"><i class="bi bi-check-circle me-1"></i>Reactivate</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Personal Details</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Father's Name</dt>
+                        <dd class="col-sm-8" th:text="${employee.fatherName ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Gender</dt>
+                        <dd class="col-sm-8" th:text="${employee.gender}"></dd>
+
+                        <dt class="col-sm-4">Date of Birth</dt>
+                        <dd class="col-sm-8"
+                            th:text="${employee.dateOfBirth != null ? #temporals.format(employee.dateOfBirth, 'dd MMM yyyy') : '—'}"></dd>
+
+                        <dt class="col-sm-4">Phone</dt>
+                        <dd class="col-sm-8" th:text="${employee.phone ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Email</dt>
+                        <dd class="col-sm-8" th:text="${employee.email ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">National ID</dt>
+                        <dd class="col-sm-8" th:text="${employee.nationalId ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Address</dt>
+                        <dd class="col-sm-8" th:text="${employee.address ?: '—'}"></dd>
+
+                        <dt class="col-sm-4">Notes</dt>
+                        <dd class="col-sm-8" th:text="${employee.notes ?: '—'}"></dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Employment</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Position</dt>
+                        <dd class="col-sm-7" th:text="${employee.position}"></dd>
+
+                        <dt class="col-sm-5">Department</dt>
+                        <dd class="col-sm-7" th:text="${employee.department}"></dd>
+
+                        <dt class="col-sm-5">Joining Date</dt>
+                        <dd class="col-sm-7" th:text="${#temporals.format(employee.joiningDate, 'dd MMM yyyy')}"></dd>
+
+                        <dt class="col-sm-5">Branch</dt>
+                        <dd class="col-sm-7" th:text="${employee.branchName ?: '—'}"></dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card hfms-card mb-3">
+                <div class="card-header bg-white"><strong>Salary</strong></div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-6">Base Salary</dt>
+                        <dd class="col-sm-6 text-end"
+                            th:text="${employee.salaryCurrency} + ' ' + ${#numbers.formatDecimal(employee.baseSalary, 1, 2)}"></dd>
+
+                        <dt class="col-sm-6">Exchange Rate to USD</dt>
+                        <dd class="col-sm-6 text-end" th:text="${#numbers.formatDecimal(employee.exchangeRateToUsd, 1, 6)}"></dd>
+
+                        <dt class="col-sm-6">USD Equivalent</dt>
+                        <dd class="col-sm-6 text-end">
+                            <strong th:text="'USD ' + ${#numbers.formatDecimal(employee.usdEquivalentSalary, 1, 2)}"></strong>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

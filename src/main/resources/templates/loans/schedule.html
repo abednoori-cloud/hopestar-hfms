@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Repayment Schedule — ' + ${loan.loanNumber})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Loans', url: '/loans'},
+    {label: ${loan.loanNumber}, url: '/loans/' + ${loan.id}},
+    {label: 'Repayment Schedule', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <h4 class="mb-0" th:text="'Repayment Schedule — ' + ${loan.loanNumber}">Repayment Schedule</h4>
+            <span class="text-muted" th:text="${loan.employeeFullName}"></span>
+            <span class="badge ms-2"
+                  th:classappend="${loan.status.name() == 'ACTIVE'} ? 'bg-primary' : (${loan.status.name() == 'CLOSED'} ? 'bg-success' : (${loan.status.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger'))"
+                  th:text="${loan.status}"></span>
+        </div>
+        <div>
+            <a class="btn btn-outline-secondary" th:href="@{/loans/{id}(id=${loan.id})}">
+                <i class="bi bi-arrow-left me-1"></i>Back to Loan
+            </a>
+        </div>
+    </div>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-2">Loan Amount</dt>
+                <dd class="col-sm-4" th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.loanAmount, 1, 2)}"></dd>
+
+                <dt class="col-sm-2">Remaining Balance</dt>
+                <dd class="col-sm-4">
+                    <strong th:text="${loan.currency} + ' ' + ${#numbers.formatDecimal(loan.remainingBalance, 1, 2)}"></strong>
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>USD Equivalent</th>
+                        <th>Payment Method</th>
+                        <th>Ledger Transaction</th>
+                        <th>Notes</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${repayments.isEmpty()}">
+                        <td colspan="6" class="text-center text-muted py-4">No repayments have been recorded yet.</td>
+                    </tr>
+                    <tr th:each="repayment : ${repayments}">
+                        <td th:text="${#temporals.format(repayment.repaymentDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="${repayment.currency} + ' ' + ${#numbers.formatDecimal(repayment.amount, 1, 2)}"></td>
+                        <td th:text="'USD ' + ${#numbers.formatDecimal(repayment.usdEquivalentAmount, 1, 2)}"></td>
+                        <td th:text="${repayment.paymentMethod.name}"></td>
+                        <td>
+                            <span th:if="${repayment.ledgerTransactionCode != null}" th:text="${repayment.ledgerTransactionCode}"></span>
+                            <span th:unless="${repayment.ledgerTransactionCode != null}" class="text-muted">—</span>
+                        </td>
+                        <td th:text="${repayment.notes ?: '—'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

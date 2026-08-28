@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5 mt-3" th:with="s=${summary}">
+
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h4 class="mb-0">Welcome, <span sec:authentication="name">user</span></h4>
+            <span class="text-muted">HopeStar Finance &amp; Student Management — overview for <span th:text="${s.financialSummary.currentPeriodLabel}">This Month</span></span>
+        </div>
+    </div>
+
+    <!-- Financial summary -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Total Income (Posted)</div>
+                    <div class="fs-4 fw-semibold text-success">USD <span th:text="${#numbers.formatDecimal(s.financialSummary.totalIncomeUsd, 1, 2)}">0.00</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Total Expense (Posted)</div>
+                    <div class="fs-4 fw-semibold text-danger">USD <span th:text="${#numbers.formatDecimal(s.financialSummary.totalExpenseUsd, 1, 2)}">0.00</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase">Net Position</div>
+                    <div class="fs-4 fw-semibold" th:classappend="${s.financialSummary.netPositionUsd.signum()} >= 0 ? 'text-success' : 'text-danger'">
+                        USD <span th:text="${#numbers.formatDecimal(s.financialSummary.netPositionUsd, 1, 2)}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase" th:text="${s.financialSummary.currentPeriodLabel} + ' Net'">This Month Net</div>
+                    <div class="fs-4 fw-semibold" th:classappend="${s.financialSummary.currentPeriodNetUsd.signum()} >= 0 ? 'text-success' : 'text-danger'">
+                        USD <span th:text="${#numbers.formatDecimal(s.financialSummary.currentPeriodNetUsd, 1, 2)}">0.00</span>
+                    </div>
+                    <div class="text-muted small mt-1">
+                        +<span th:text="${#numbers.formatDecimal(s.financialSummary.currentPeriodIncomeUsd, 1, 2)}">0.00</span>
+                        / -<span th:text="${#numbers.formatDecimal(s.financialSummary.currentPeriodExpenseUsd, 1, 2)}">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outstanding student payments / Salary overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-cash-coin me-2"></i>Outstanding Student Payments</strong>
+                    <a class="btn btn-sm btn-outline-secondary" href="/payments">View Payments</a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Total Outstanding</div>
+                            <div class="fs-5 fw-semibold">USD <span th:text="${#numbers.formatDecimal(s.outstandingReceivables.totalOutstandingUsd, 1, 2)}">0.00</span></div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Students Owing</div>
+                            <div class="fs-5 fw-semibold" th:text="${s.outstandingReceivables.studentsWithOutstandingBalanceCount}">0</div>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(s.outstandingReceivables.topOutstandingContracts)}" class="text-muted small">
+                        No active contracts currently have an outstanding balance.
+                    </div>
+                    <div class="table-responsive" th:unless="${#lists.isEmpty(s.outstandingReceivables.topOutstandingContracts)}">
+                        <table class="table table-sm table-hfms mb-0">
+                            <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th class="text-end">Contract (USD)</th>
+                                <th class="text-end">Remaining (USD)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="c : ${s.outstandingReceivables.topOutstandingContracts}">
+                                <td>
+                                    <a th:href="@{/students/{id}(id=${c.studentId})}" th:text="${c.studentFullName}"></a>
+                                    <span class="text-muted">(<span th:text="${c.studentCode}"></span>)</span>
+                                </td>
+                                <td class="text-end" th:text="${#numbers.formatDecimal(c.contractUsdEquivalentAmount, 1, 2)}"></td>
+                                <td class="text-end fw-semibold text-danger" th:text="${#numbers.formatDecimal(c.remainingBalanceUsd, 1, 2)}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-wallet2 me-2"></i>Salary Overview</strong>
+                    <a class="btn btn-sm btn-outline-secondary" href="/salaries">View Salaries</a>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Pending Salaries</div>
+                            <div class="fs-5 fw-semibold" th:text="${s.salaryOverview.pendingSalaryCount}">0</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Pending Basic Pay (USD)</div>
+                            <div class="fs-5 fw-semibold">USD <span th:text="${#numbers.formatDecimal(s.salaryOverview.pendingBasicPayUsd, 1, 2)}">0.00</span></div>
+                        </div>
+                    </div>
+                    <div class="text-muted small mb-3">
+                        <span th:text="${s.salaryOverview.currentPeriodLabel}">This Month</span>:
+                        <span th:text="${s.salaryOverview.currentPeriodPostedCount}">0</span> posted,
+                        <span th:text="${s.salaryOverview.currentPeriodDraftCount}">0</span> still pending
+                        (<span th:text="${s.salaryOverview.currentPeriodTotalCount}">0</span> generated so far).
+                    </div>
+                    <div th:if="${#lists.isEmpty(s.salaryOverview.pendingSalaries)}" class="text-muted small">
+                        No pending salary records.
+                    </div>
+                    <div class="table-responsive" th:unless="${#lists.isEmpty(s.salaryOverview.pendingSalaries)}">
+                        <table class="table table-sm table-hfms mb-0">
+                            <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Period</th>
+                                <th class="text-end">Net Salary</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="p : ${s.salaryOverview.pendingSalaries}">
+                                <td>
+                                    <a th:href="@{/salaries/{id}(id=${p.salaryId})}" th:text="${p.employeeFullName}"></a>
+                                    <span class="text-muted">(<span th:text="${p.employeeCode}"></span>)</span>
+                                </td>
+                                <td th:text="${p.month} + '/' + ${p.year}"></td>
+                                <td class="text-end" th:text="${p.currency} + ' ' + ${#numbers.formatDecimal(p.netSalary, 1, 2)}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent transactions / statistics -->
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3">
+                    <strong><i class="bi bi-clock-history me-2"></i>Recent Financial Activity</strong>
+                </div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(s.recentTransactions)}" class="text-muted small">
+                        No posted transactions yet.
+                    </div>
+                    <div class="table-responsive" th:unless="${#lists.isEmpty(s.recentTransactions)}">
+                        <table class="table table-sm table-hfms mb-0">
+                            <thead>
+                            <tr>
+                                <th>Transaction #</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">USD</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="t : ${s.recentTransactions}">
+                                <td th:text="${t.transactionCode}"></td>
+                                <td th:text="${#temporals.format(t.transactionDate, 'dd MMM yyyy')}"></td>
+                                <td>
+                                    <span th:text="${t.transactionType}"></span>
+                                    <span class="badge ms-1" th:classappend="${t.direction.name() == 'INCOME'} ? 'bg-success' : 'bg-danger'"
+                                          th:text="${t.direction}"></span>
+                                </td>
+                                <td class="text-end" th:text="${t.currencyCode} + ' ' + ${#numbers.formatDecimal(t.originalAmount, 1, 2)}"></td>
+                                <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(t.usdEquivalentAmount, 1, 2)}"></td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3">
+                    <strong><i class="bi bi-bar-chart-fill me-2"></i>Student &amp; Employee Statistics</strong>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Active Students</div>
+                            <div class="fs-4 fw-semibold" th:text="${s.stats.activeStudentCount}">0</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Active Employees</div>
+                            <div class="fs-4 fw-semibold" th:text="${s.stats.activeEmployeeCount}">0</div>
+                        </div>
+                    </div>
+                    <div class="text-muted small text-uppercase mb-1">Students by Status</div>
+                    <ul class="list-unstyled mb-0">
+                        <li th:each="entry : ${s.stats.activeStudentsByStatus}" class="d-flex justify-content-between border-bottom py-1">
+                            <span th:text="${entry.key}"></span>
+                            <span class="fw-semibold" th:text="${entry.value}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

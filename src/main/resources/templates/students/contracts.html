@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Contracts · ' + ${student.fullName})}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Students', url: '/students'},
+    {label: ${student.studentCode}, url: '/students/' + ${student.id}},
+    {label: 'Contracts', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Contracts — <span th:text="${student.fullName}"></span></h4>
+        <a class="btn btn-outline-secondary" th:href="@{/students/{id}(id=${student.id})}">
+            <i class="bi bi-arrow-left me-1"></i>Back to Student
+        </a>
+    </div>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Program</th>
+                        <th>Contract Date</th>
+                        <th>Total</th>
+                        <th>Reg. Fee</th>
+                        <th>Discount</th>
+                        <th>Final Amount</th>
+                        <th>USD Equivalent</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${contracts.isEmpty()}">
+                        <td colspan="9" class="text-center text-muted py-4">No contracts yet for this student.</td>
+                    </tr>
+                    <tr th:each="contract : ${contracts}">
+                        <td th:text="${contract.program.name}"></td>
+                        <td th:text="${#temporals.format(contract.contractDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="${contract.currencyCode} + ' ' + ${#numbers.formatDecimal(contract.totalContractAmount, 1, 2)}"></td>
+                        <td th:text="${contract.currencyCode} + ' ' + ${#numbers.formatDecimal(contract.registrationFee, 1, 2)}"></td>
+                        <td th:text="${contract.currencyCode} + ' ' + ${#numbers.formatDecimal(contract.discountAmount, 1, 2)}"></td>
+                        <td>
+                            <strong th:text="${contract.currencyCode} + ' ' + ${#numbers.formatDecimal(contract.finalAmount, 1, 2)}"></strong>
+                        </td>
+                        <td>
+                            <span th:text="'USD ' + ${#numbers.formatDecimal(contract.usdEquivalentAmount, 1, 2)}"></span>
+                            <div class="text-muted small" th:if="${contract.currencyCode.name() != 'USD'}"
+                                 th:text="'@ rate ' + ${#numbers.formatDecimal(contract.exchangeRateToUsd, 1, 6)}"></div>
+                        </td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${contract.status.name() == 'ACTIVE'} ? 'bg-success' : (${contract.status.name() == 'COMPLETED'} ? 'bg-primary' : 'bg-secondary')"
+                                  th:text="${contract.status}"></span>
+                        </td>
+                        <td class="text-end">
+                            <a th:if="${contract.status.name() == 'ACTIVE'}" class="btn btn-sm btn-success"
+                               th:href="@{/payments/new(studentId=${student.id}, contractId=${contract.id})}">
+                                <i class="bi bi-cash-coin"></i> Record Payment
+                            </a>
+                            <form th:if="${contract.status.name() == 'ACTIVE'}" class="d-inline" method="post"
+                                  th:action="@{/students/{id}/contracts/{cid}/complete(id=${student.id}, cid=${contract.id})}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Mark Completed</button>
+                            </form>
+                            <form th:if="${contract.status.name() == 'ACTIVE'}" class="d-inline" method="post"
+                                  th:action="@{/students/{id}/contracts/{cid}/cancel(id=${student.id}, cid=${contract.id})}"
+                                  onsubmit="return confirm('Cancel this contract?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-header bg-white"><strong>Add New Contract</strong></div>
+        <div class="card-body">
+            <form method="post" th:action="@{/students/{id}/contracts(id=${student.id})}"
+                  th:object="${contractCreateDTO}" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Program *</label>
+                        <select class="form-select" th:field="*{programId}"
+                                th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
+                            <option value="">Select a program…</option>
+                            <option th:each="program : ${programs}" th:value="${program.id}"
+                                    th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Contract Date *</label>
+                        <input type="date" class="form-control" th:field="*{contractDate}"
+                               th:classappend="${#fields.hasErrors('contractDate')} ? 'is-invalid'"/>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('contractDate')}" th:errors="*{contractDate}"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Currency *</label>
+                        <select class="form-select" id="currencySelect" th:field="*{currencyCode}"
+                                th:classappend="${#fields.hasErrors('currencyCode')} ? 'is-invalid'">
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                            <option value="AFN">AFN</option>
+                        </select>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('currencyCode')}" th:errors="*{currencyCode}"></div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Total Contract Amount *</label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:field="*{totalContractAmount}"
+                               th:classappend="${#fields.hasErrors('totalContractAmount')} ? 'is-invalid'"/>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('totalContractAmount')}" th:errors="*{totalContractAmount}"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Registration Fee</label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:field="*{registrationFee}"/>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Discount Amount</label>
+                        <input type="number" step="0.01" min="0" class="form-control" th:field="*{discountAmount}"/>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Exchange Rate to USD *
+                            <i class="bi bi-info-circle" title="Entered manually. Base currency is USD, so this is always 1 for USD contracts."></i>
+                        </label>
+                        <input type="number" step="0.000001" min="0.000001" class="form-control" id="exchangeRateInput"
+                               th:field="*{exchangeRateToUsd}"
+                               th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                        <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Discount Reason</label>
+                        <input type="text" class="form-control" th:field="*{discountReason}"/>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notes</label>
+                        <input type="text" class="form-control" th:field="*{notes}"/>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add Contract</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD contracts regardless of what is submitted here (see
+    // StudentContractServiceImpl#resolveExchangeRate).
+    const currencySelect = document.getElementById('currencySelect');
+    const exchangeRateInput = document.getElementById('exchangeRateInput');
+
+    function syncExchangeRateField() {
+        if (currencySelect.value === 'USD') {
+            exchangeRateInput.value = '1';
+            exchangeRateInput.setAttribute('readonly', 'readonly');
+        } else {
+            exchangeRateInput.removeAttribute('readonly');
+        }
+    }
+    currencySelect.addEventListener('change', syncExchangeRateField);
+    syncExchangeRateField();
+</script>
+</body>
+</html>

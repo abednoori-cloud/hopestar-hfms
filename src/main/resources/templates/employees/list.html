@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Employees')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Employees', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-people-fill me-2"></i>Employees</h4>
+        <a class="btn btn-primary" href="/employees/new"><i class="bi bi-plus-lg me-1"></i>New Employee</a>
+    </div>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-body">
+            <form method="get" th:action="@{/employees}" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" th:value="${searchDTO.name}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Employee Code</label>
+                    <input type="text" class="form-control" name="employeeCode" th:value="${searchDTO.employeeCode}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-control" name="phone" th:value="${searchDTO.phone}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Email</label>
+                    <input type="text" class="form-control" name="email" th:value="${searchDTO.email}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="employmentStatusId">
+                        <option value="">All Statuses</option>
+                        <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"
+                                th:selected="${searchDTO.employmentStatusId != null and searchDTO.employmentStatusId == status.id}"></option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <input type="text" class="form-control" name="department" th:value="${searchDTO.department}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Position</label>
+                    <input type="text" class="form-control" name="position" th:value="${searchDTO.position}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Sort By</label>
+                    <select class="form-select" name="sortBy">
+                        <option value="fullName" th:selected="${searchDTO.sortBy == 'fullName'}">Full Name</option>
+                        <option value="employeeCode" th:selected="${searchDTO.sortBy == 'employeeCode'}">Employee Code</option>
+                        <option value="joiningDate" th:selected="${searchDTO.sortBy == 'joiningDate'}">Joining Date</option>
+                        <option value="baseSalary" th:selected="${searchDTO.sortBy == 'baseSalary'}">Base Salary</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Direction</label>
+                    <select class="form-select" name="sortDirection">
+                        <option value="ASC" th:selected="${searchDTO.sortDirection == 'ASC'}">Ascending</option>
+                        <option value="DESC" th:selected="${searchDTO.sortDirection == 'DESC'}">Descending</option>
+                    </select>
+                </div>
+
+                <div class="col-12 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary me-2"><i class="bi bi-search me-1"></i>Search</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/employees}">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Employee Code</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Position</th>
+                        <th>Joining Date</th>
+                        <th>Base Salary</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${employeesPage.content.isEmpty()}">
+                        <td colspan="8" class="text-center text-muted py-4">No employees match the current filters.</td>
+                    </tr>
+                    <tr th:each="employee : ${employeesPage.content}">
+                        <td><a th:href="@{/employees/{id}(id=${employee.id})}" th:text="${employee.employeeCode}"></a></td>
+                        <td th:text="${employee.fullName}"></td>
+                        <td th:text="${employee.department}"></td>
+                        <td th:text="${employee.position}"></td>
+                        <td th:text="${#temporals.format(employee.joiningDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="${employee.salaryCurrency} + ' ' + ${#numbers.formatDecimal(employee.baseSalary, 1, 2)}"></td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${employee.active} ? 'badge-status-active' : 'badge-status-inactive'"
+                                  th:text="${employee.employmentStatus.name}"></span>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/employees/{id}(id=${employee.id})}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/employees/{id}/edit(id=${employee.id})}">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mt-3" th:if="${employeesPage.totalPages > 1}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${employeesPage.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/employees(page=${employeesPage.pageNumber - 1}, size=${employeesPage.pageSize}, name=${searchDTO.name}, employeeCode=${searchDTO.employeeCode}, phone=${searchDTO.phone}, email=${searchDTO.email}, department=${searchDTO.department}, position=${searchDTO.position}, employmentStatusId=${searchDTO.employmentStatusId}, sortBy=${searchDTO.sortBy}, sortDirection=${searchDTO.sortDirection})}">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link" th:text="'Page ' + (${employeesPage.pageNumber} + 1) + ' of ' + ${employeesPage.totalPages}"></span>
+            </li>
+            <li class="page-item" th:classappend="${employeesPage.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/employees(page=${employeesPage.pageNumber + 1}, size=${employeesPage.pageSize}, name=${searchDTO.name}, employeeCode=${searchDTO.employeeCode}, phone=${searchDTO.phone}, email=${searchDTO.email}, department=${searchDTO.department}, position=${searchDTO.position}, employmentStatusId=${searchDTO.employmentStatusId}, sortBy=${searchDTO.sortBy}, sortDirection=${searchDTO.sortDirection})}">Next</a>
+            </li>
+        </ul>
+    </nav>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

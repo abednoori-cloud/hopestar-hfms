@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Students')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Students', url: null}
+} } })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-people-fill me-2"></i>Students</h4>
+        <a class="btn btn-primary" href="/students/new"><i class="bi bi-plus-lg me-1"></i>New Student</a>
+    </div>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-body">
+            <form method="get" th:action="@{/students}" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Name</label>
+                    <input type="text" class="form-control" name="name" th:value="${searchDTO.name}"
+                           placeholder="Full name"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Student Code</label>
+                    <input type="text" class="form-control" name="studentCode" th:value="${searchDTO.studentCode}"
+                           placeholder="STU-2026-000001"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Passport #</label>
+                    <input type="text" class="form-control" name="passportNumber" th:value="${searchDTO.passportNumber}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Phone</label>
+                    <input type="text" class="form-control" name="phone" th:value="${searchDTO.phone}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Email</label>
+                    <input type="text" class="form-control" name="email" th:value="${searchDTO.email}"/>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Program</label>
+                    <select class="form-select" name="programId">
+                        <option value="">All Programs</option>
+                        <option th:each="program : ${programs}" th:value="${program.id}"
+                                th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"
+                                th:selected="${searchDTO.programId != null and searchDTO.programId == program.id}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Destination Country</label>
+                    <input type="text" class="form-control" name="destinationCountry"
+                           th:value="${searchDTO.destinationCountry}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="statusId">
+                        <option value="">All Statuses</option>
+                        <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"
+                                th:selected="${searchDTO.statusId != null and searchDTO.statusId == status.id}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                    <a class="btn btn-outline-secondary" th:href="@{/students}">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Student Code</th>
+                        <th>Full Name</th>
+                        <th>Program</th>
+                        <th>Country</th>
+                        <th>Status</th>
+                        <th>Registered</th>
+                        <th>Contracts</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${studentsPage.content.isEmpty()}">
+                        <td colspan="8" class="text-center text-muted py-4">No students match the current filters.</td>
+                    </tr>
+                    <tr th:each="student : ${studentsPage.content}">
+                        <td><a th:href="@{/students/{id}(id=${student.id})}" th:text="${student.studentCode}"></a></td>
+                        <td th:text="${student.fullName}"></td>
+                        <td th:text="${student.program.name}"></td>
+                        <td th:text="${student.destinationCountry}"></td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${student.active} ? 'badge-status-active' : 'badge-status-inactive'"
+                                  th:text="${student.status.name}"></span>
+                        </td>
+                        <td th:text="${#temporals.format(student.registrationDate, 'dd MMM yyyy')}"></td>
+                        <td th:text="${student.contractCount}"></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/students/{id}(id=${student.id})}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/students/{id}/edit(id=${student.id})}">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mt-3" th:if="${studentsPage.totalPages > 1}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${studentsPage.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/students(page=${studentsPage.pageNumber - 1}, size=${studentsPage.pageSize}, name=${searchDTO.name}, studentCode=${searchDTO.studentCode}, passportNumber=${searchDTO.passportNumber}, phone=${searchDTO.phone}, email=${searchDTO.email}, programId=${searchDTO.programId}, destinationCountry=${searchDTO.destinationCountry}, statusId=${searchDTO.statusId})}">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link" th:text="'Page ' + (${studentsPage.pageNumber} + 1) + ' of ' + ${studentsPage.totalPages}"></span>
+            </li>
+            <li class="page-item" th:classappend="${studentsPage.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/students(page=${studentsPage.pageNumber + 1}, size=${studentsPage.pageSize}, name=${searchDTO.name}, studentCode=${searchDTO.studentCode}, passportNumber=${searchDTO.passportNumber}, phone=${searchDTO.phone}, email=${searchDTO.email}, programId=${searchDTO.programId}, destinationCountry=${searchDTO.destinationCountry}, statusId=${searchDTO.statusId})}">Next</a>
+            </li>
+        </ul>
+    </nav>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
