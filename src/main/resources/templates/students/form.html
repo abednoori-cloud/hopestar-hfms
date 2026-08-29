@@ -6,8 +6,8 @@
 <div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
     {label: 'Dashboard', url: '/dashboard'},
     {label: 'Students', url: '/students'},
-    {label: ${isEdit} ? 'Edit Student' : 'New Student', url: null}
-} } })}"></div>
+    {label: isEdit ? 'Edit Student' : 'New Student', url: null}
+} })}"></div>
 <div th:replace="~{fragments/layout :: flashMessages}"></div>
 
 <div class="container-fluid pb-5">
@@ -25,7 +25,74 @@
 
                     <form th:if="${!isEdit}" method="post" th:action="@{/students}"
                           th:object="${studentCreateDTO}" novalidate>
-                        <div th:replace="~{this :: fields}"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" th:field="*{fullName}"
+                                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Father's Name</label>
+                                <input type="text" class="form-control" th:field="*{fatherName}"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" th:field="*{phone}"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" th:field="*{email}"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Passport Number</label>
+                                <input type="text" class="form-control" th:field="*{passportNumber}"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Passport Expiry</label>
+                                <input type="date" class="form-control" th:field="*{passportExpiry}"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Program *</label>
+                                <select class="form-select" th:field="*{programId}"
+                                        th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
+                                    <option value="">Select a program…</option>
+                                    <option th:each="program : ${programs}" th:value="${program.id}"
+                                            th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Destination Country</label>
+                                <input type="text" class="form-control" th:field="*{destinationCountry}"
+                                       placeholder="Defaults to the program's country if left blank"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" th:field="*{statusId}"
+                                        th:classappend="${#fields.hasErrors('statusId')} ? 'is-invalid'">
+                                    <option value="">Select a status…</option>
+                                    <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('statusId')}" th:errors="*{statusId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Registration Date *</label>
+                                <input type="date" class="form-control" th:field="*{registrationDate}"
+                                       th:classappend="${#fields.hasErrors('registrationDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('registrationDate')}" th:errors="*{registrationDate}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" rows="3" th:field="*{notes}"></textarea>
+                            </div>
+                        </div>
                         <div class="d-flex justify-content-end mt-4">
                             <a class="btn btn-outline-secondary me-2" th:href="@{/students}">Cancel</a>
                             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Student</button>
@@ -34,7 +101,74 @@
 
                     <form th:if="${isEdit}" method="post" th:action="@{/students/{id}(id=${studentId})}"
                           th:object="${studentUpdateDTO}" novalidate>
-                        <div th:replace="~{this :: fields}"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" th:field="*{fullName}"
+                                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Father's Name</label>
+                                <input type="text" class="form-control" th:field="*{fatherName}"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" th:field="*{phone}"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" th:field="*{email}"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Passport Number</label>
+                                <input type="text" class="form-control" th:field="*{passportNumber}"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Passport Expiry</label>
+                                <input type="date" class="form-control" th:field="*{passportExpiry}"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Program *</label>
+                                <select class="form-select" th:field="*{programId}"
+                                        th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
+                                    <option value="">Select a program…</option>
+                                    <option th:each="program : ${programs}" th:value="${program.id}"
+                                            th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Destination Country</label>
+                                <input type="text" class="form-control" th:field="*{destinationCountry}"
+                                       placeholder="Defaults to the program's country if left blank"/>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Status *</label>
+                                <select class="form-select" th:field="*{statusId}"
+                                        th:classappend="${#fields.hasErrors('statusId')} ? 'is-invalid'">
+                                    <option value="">Select a status…</option>
+                                    <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('statusId')}" th:errors="*{statusId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Registration Date *</label>
+                                <input type="date" class="form-control" th:field="*{registrationDate}"
+                                       th:classappend="${#fields.hasErrors('registrationDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('registrationDate')}" th:errors="*{registrationDate}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Notes</label>
+                                <textarea class="form-control" rows="3" th:field="*{notes}"></textarea>
+                            </div>
+                        </div>
                         <div class="d-flex justify-content-end mt-4">
                             <a class="btn btn-outline-secondary me-2" th:href="@{/students/{id}(id=${studentId})}">Cancel</a>
                             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
@@ -49,76 +183,4 @@
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
-
-<!-- Shared field markup, included into whichever form (create/edit) is active above via th:replace="~{this :: fields}" -->
-<th:block th:fragment="fields">
-    <div class="row g-3">
-        <div class="col-md-6">
-            <label class="form-label">Full Name *</label>
-            <input type="text" class="form-control" th:field="*{fullName}"
-                   th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid'"/>
-            <div class="invalid-feedback" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
-        </div>
-        <div class="col-md-6">
-            <label class="form-label">Father's Name</label>
-            <input type="text" class="form-control" th:field="*{fatherName}"/>
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Phone</label>
-            <input type="text" class="form-control" th:field="*{phone}"/>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Email</label>
-            <input type="email" class="form-control" th:field="*{email}"
-                   th:classappend="${#fields.hasErrors('email')} ? 'is-invalid'"/>
-            <div class="invalid-feedback" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Passport Number</label>
-            <input type="text" class="form-control" th:field="*{passportNumber}"/>
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Passport Expiry</label>
-            <input type="date" class="form-control" th:field="*{passportExpiry}"/>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Program *</label>
-            <select class="form-select" th:field="*{programId}"
-                    th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
-                <option value="">Select a program…</option>
-                <option th:each="program : ${programs}" th:value="${program.id}"
-                        th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
-            </select>
-            <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Destination Country</label>
-            <input type="text" class="form-control" th:field="*{destinationCountry}"
-                   placeholder="Defaults to the program's country if left blank"/>
-        </div>
-
-        <div class="col-md-4">
-            <label class="form-label">Status *</label>
-            <select class="form-select" th:field="*{statusId}"
-                    th:classappend="${#fields.hasErrors('statusId')} ? 'is-invalid'">
-                <option value="">Select a status…</option>
-                <option th:each="status : ${statuses}" th:value="${status.id}" th:text="${status.name}"></option>
-            </select>
-            <div class="invalid-feedback" th:if="${#fields.hasErrors('statusId')}" th:errors="*{statusId}"></div>
-        </div>
-        <div class="col-md-4">
-            <label class="form-label">Registration Date *</label>
-            <input type="date" class="form-control" th:field="*{registrationDate}"
-                   th:classappend="${#fields.hasErrors('registrationDate')} ? 'is-invalid'"/>
-            <div class="invalid-feedback" th:if="${#fields.hasErrors('registrationDate')}" th:errors="*{registrationDate}"></div>
-        </div>
-
-        <div class="col-12">
-            <label class="form-label">Notes</label>
-            <textarea class="form-control" rows="3" th:field="*{notes}"></textarea>
-        </div>
-    </div>
-</th:block>
 </html>

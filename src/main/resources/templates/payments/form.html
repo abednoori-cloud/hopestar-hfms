@@ -6,8 +6,8 @@
 <div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
     {label: 'Dashboard', url: '/dashboard'},
     {label: 'Payments', url: '/payments'},
-    {label: ${isEdit} ? 'Edit Payment' : 'Record Payment', url: null}
-} } })}"></div>
+    {label: isEdit ? 'Edit Payment' : 'Record Payment', url: null}
+} })}"></div>
 <div th:replace="~{fragments/layout :: flashMessages}"></div>
 
 <div class="container-fluid pb-5">

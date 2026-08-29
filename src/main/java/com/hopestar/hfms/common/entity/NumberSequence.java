@@ -79,7 +79,7 @@ public class NumberSequence {
     @Column(name = "padding_length", nullable = false)
     private int paddingLength;
 
-    @Column(name = "last_value", nullable = false)
+    @Column(name = "\"last_value\"", nullable = false)
     private long lastValue;
 
     @Version

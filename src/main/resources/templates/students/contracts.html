@@ -6,9 +6,9 @@
 <div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
     {label: 'Dashboard', url: '/dashboard'},
     {label: 'Students', url: '/students'},
-    {label: ${student.studentCode}, url: '/students/' + ${student.id}},
+    {label: student.studentCode, url: '/students/' + student.id},
     {label: 'Contracts', url: null}
-} } })}"></div>
+} })}"></div>
 <div th:replace="~{fragments/layout :: flashMessages}"></div>
 
 <div class="container-fluid pb-5">
