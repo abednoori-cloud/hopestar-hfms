@@ -6,6 +6,8 @@ import com.hopestar.hfms.module.finance.employee.dto.EmployeeResponseDTO;
 import com.hopestar.hfms.module.finance.employee.dto.EmployeeSearchDTO;
 import com.hopestar.hfms.module.finance.employee.dto.EmployeeUpdateDTO;
 
+import java.util.List;
+
 /**
  * Business operations for {@link com.hopestar.hfms.module.finance.employee.entity.Employee},
  * per the approved Phase 3C business rules:
@@ -33,6 +35,9 @@ public interface EmployeeService {
     EmployeeResponseDTO getByEmployeeCode(String employeeCode);
 
     PageResponse<EmployeeResponseDTO> search(EmployeeSearchDTO searchDTO);
+
+    /** Every active employee, ordered by name, for simple pickers (e.g. the standalone Loan/Advance/Salary forms). */
+    List<EmployeeResponseDTO> listActive();
 
     /** Soft-deletes (deactivates) an employee. Never permanently deleted, per the approved business rules. */
     void deactivate(Long id);

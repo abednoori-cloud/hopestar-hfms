@@ -6,6 +6,8 @@ import com.hopestar.hfms.module.student.dto.StudentResponseDTO;
 import com.hopestar.hfms.module.student.dto.StudentSearchDTO;
 import com.hopestar.hfms.module.student.dto.StudentUpdateDTO;
 
+import java.util.List;
+
 /**
  * Business operations for {@code Student}, per SRS Module 3 and the
  * approved Business Rules (§4):
@@ -27,6 +29,9 @@ public interface StudentService {
     StudentResponseDTO getByStudentCode(String studentCode);
 
     PageResponse<StudentResponseDTO> search(StudentSearchDTO searchDTO);
+
+    /** Every active student, ordered by name, for simple pickers (e.g. the standalone Record Payment form). */
+    List<StudentResponseDTO> listActive();
 
     /**
      * Soft-deletes (deactivates) a student. Per the approved business

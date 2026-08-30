@@ -236,6 +236,8 @@ public class EmployeeLoanController {
         model.addAttribute("paymentMethods", paymentMethodService.listActive());
         if (employeeId != null) {
             model.addAttribute("selectedEmployee", employeeService.getById(employeeId));
+        } else {
+            model.addAttribute("employees", employeeService.listActive());
         }
     }
 }

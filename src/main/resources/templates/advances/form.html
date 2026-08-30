@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${isEdit} ? 'Edit Advance' : 'New Advance')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Advances', url: '/advances'},
+    {label: isEdit ? 'Edit Advance' : 'New Advance', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card hfms-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0" th:if="${!isEdit}"><i class="bi bi-cash-coin me-2"></i>New Advance (Draft)</h5>
+                    <h5 class="mb-0" th:if="${isEdit}">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Draft Advance
+                        <span class="text-muted fs-6" th:text="'(' + ${advance.advanceNumber} + ')'"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <!-- CREATE -- Step 1: pick an employee (standalone entry only; skipped when pre-filled from an employee's detail page) -->
+                    <form th:if="${!isEdit and selectedEmployee == null}" method="get" th:action="@{/advances/new}" class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Employee *</label>
+                            <select class="form-select" name="employeeId" required>
+                                <option value="">Select an employee…</option>
+                                <option th:each="employee : ${employees}" th:value="${employee.id}"
+                                        th:text="${employee.fullName} + ' (' + ${employee.employeeCode} + ')'"></option>
+                            </select>
+                            <div class="form-text">Pick an employee to continue. Tip: opening this form from an employee's detail page skips this step.</div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-right me-1"></i>Continue</button>
+                        </div>
+                    </form>
+
+                    <!-- CREATE -- Step 2: advance details -->
+                    <form th:if="${!isEdit and selectedEmployee != null}" method="post" th:action="@{/advances}" th:object="${createDTO}" novalidate>
+
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-6">
+                                <label class="form-label">Employee</label>
+                                <input type="text" class="form-control" readonly
+                                       th:value="${selectedEmployee.fullName} + ' (' + ${selectedEmployee.employeeCode} + ')'"/>
+                                <input type="hidden" th:field="*{employeeId}"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Advance Date *</label>
+                                <input type="date" class="form-control" th:field="*{advanceDate}"
+                                       th:classappend="${#fields.hasErrors('advanceDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('advanceDate')}" th:errors="*{advanceDate}"></div>
+                            </div>
+                        </div>
+
+                        <hr/>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Advance Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{advanceAmount}"
+                                       th:classappend="${#fields.hasErrors('advanceAmount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('advanceAmount')}" th:errors="*{advanceAmount}"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currency}"
+                                        th:classappend="${#fields.hasErrors('currency')} ? 'is-invalid'">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="AFN">AFN</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" rows="2" th:field="*{remarks}"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/advances/new}">Change Employee</a>
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/advances}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save as Draft</button>
+                        </div>
+                    </form>
+
+                    <!-- EDIT DRAFT -->
+                    <form th:if="${isEdit}" method="post" th:action="@{/advances/{id}/edit(id=${advanceId})}" th:object="${updateDTO}" novalidate>
+                        <div class="row g-3 mb-1">
+                            <div class="col-md-6">
+                                <label class="form-label">Employee</label>
+                                <input type="text" class="form-control" readonly
+                                       th:value="${advance.employeeFullName} + ' (' + ${advance.employeeCode} + ')'"/>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Advance Date *</label>
+                                <input type="date" class="form-control" th:field="*{advanceDate}"
+                                       th:classappend="${#fields.hasErrors('advanceDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('advanceDate')}" th:errors="*{advanceDate}"></div>
+                            </div>
+                        </div>
+
+                        <hr/>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Advance Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{advanceAmount}"
+                                       th:classappend="${#fields.hasErrors('advanceAmount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('advanceAmount')}" th:errors="*{advanceAmount}"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currency}"
+                                        th:classappend="${#fields.hasErrors('currency')} ? 'is-invalid'">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="AFN">AFN</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" rows="2" th:field="*{remarks}"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/advances/{id}(id=${advanceId})}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD (see MoneyUtil.resolveExchangeRateToUsd, the single shared
+    // implementation used identically by every module).
+    document.querySelectorAll('.currency-select').forEach(function (select) {
+        var form = select.closest('form');
+        var rateInput = form.querySelector('.exchange-rate-input');
+        function syncRate() {
+            if (select.value === 'USD') {
+                rateInput.value = '1';
+                rateInput.setAttribute('readonly', 'readonly');
+            } else {
+                rateInput.removeAttribute('readonly');
+            }
+        }
+        select.addEventListener('change', syncRate);
+        syncRate();
+    });
+</script>
+</body>
+</html>

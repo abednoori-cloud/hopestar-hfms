@@ -81,7 +81,6 @@ public class StudentController {
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("studentCreateDTO", new StudentCreateDTO());
-        model.addAttribute("programs", programService.listActive());
         model.addAttribute("statuses", studentStatusService.listActive());
         model.addAttribute("isEdit", false);
         return "students/form";
@@ -133,7 +132,7 @@ public class StudentController {
         updateDTO.setEmail(existing.getEmail());
         updateDTO.setPassportNumber(existing.getPassportNumber());
         updateDTO.setPassportExpiry(existing.getPassportExpiry());
-        updateDTO.setProgramId(existing.getProgram().getId());
+        updateDTO.setProgramName(existing.getProgram().getName());
         updateDTO.setDestinationCountry(existing.getDestinationCountry());
         updateDTO.setStatusId(existing.getStatus().getId());
         updateDTO.setRegistrationDate(existing.getRegistrationDate());
@@ -315,7 +314,6 @@ public class StudentController {
     // ---------------------------------------------------------------
 
     private void populateFormLookups(Model model, boolean isEdit) {
-        model.addAttribute("programs", programService.listActive());
         model.addAttribute("statuses", studentStatusService.listActive());
         model.addAttribute("isEdit", isEdit);
     }

@@ -57,19 +57,17 @@
                                 <input type="date" class="form-control" th:field="*{passportExpiry}"/>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Program *</label>
-                                <select class="form-select" th:field="*{programId}"
-                                        th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
-                                    <option value="">Select a program…</option>
-                                    <option th:each="program : ${programs}" th:value="${program.id}"
-                                            th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
-                                </select>
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
+                                <label class="form-label">Program Name *</label>
+                                <input type="text" class="form-control" th:field="*{programName}"
+                                       th:classappend="${#fields.hasErrors('programName')} ? 'is-invalid'"
+                                       placeholder="Type a program name — an existing match is reused, otherwise a new one is created"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programName')}" th:errors="*{programName}"></div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Destination Country</label>
+                                <label class="form-label">Destination Country *</label>
                                 <input type="text" class="form-control" th:field="*{destinationCountry}"
-                                       placeholder="Defaults to the program's country if left blank"/>
+                                       th:classappend="${#fields.hasErrors('destinationCountry')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('destinationCountry')}" th:errors="*{destinationCountry}"></div>
                             </div>
 
                             <div class="col-md-4">
@@ -133,19 +131,17 @@
                                 <input type="date" class="form-control" th:field="*{passportExpiry}"/>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Program *</label>
-                                <select class="form-select" th:field="*{programId}"
-                                        th:classappend="${#fields.hasErrors('programId')} ? 'is-invalid'">
-                                    <option value="">Select a program…</option>
-                                    <option th:each="program : ${programs}" th:value="${program.id}"
-                                            th:text="${program.name} + ' (' + ${program.destinationCountry} + ')'"></option>
-                                </select>
-                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programId')}" th:errors="*{programId}"></div>
+                                <label class="form-label">Program Name *</label>
+                                <input type="text" class="form-control" th:field="*{programName}"
+                                       th:classappend="${#fields.hasErrors('programName')} ? 'is-invalid'"
+                                       placeholder="Type a program name — an existing match is reused, otherwise a new one is created"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('programName')}" th:errors="*{programName}"></div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Destination Country</label>
+                                <label class="form-label">Destination Country *</label>
                                 <input type="text" class="form-control" th:field="*{destinationCountry}"
-                                       placeholder="Defaults to the program's country if left blank"/>
+                                       th:classappend="${#fields.hasErrors('destinationCountry')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('destinationCountry')}" th:errors="*{destinationCountry}"></div>
                             </div>
 
                             <div class="col-md-4">

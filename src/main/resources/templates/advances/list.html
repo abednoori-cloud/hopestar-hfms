@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Employee Advances')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Advances', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-cash-coin me-2"></i>Employee Advances</h4>
+        <a class="btn btn-primary" href="/advances/new"><i class="bi bi-plus-lg me-1"></i>New Advance</a>
+    </div>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-body">
+            <form method="get" th:action="@{/advances}" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Employee Name</label>
+                    <input type="text" class="form-control" name="employeeName" th:value="${searchDTO.employeeName}"/>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Employee Code</label>
+                    <input type="text" class="form-control" name="employeeCode" th:value="${searchDTO.employeeCode}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" name="status">
+                        <option value="">All</option>
+                        <option value="DRAFT" th:selected="${searchDTO.status != null and searchDTO.status.name() == 'DRAFT'}">Draft</option>
+                        <option value="ACTIVE" th:selected="${searchDTO.status != null and searchDTO.status.name() == 'ACTIVE'}">Active</option>
+                        <option value="CLOSED" th:selected="${searchDTO.status != null and searchDTO.status.name() == 'CLOSED'}">Closed</option>
+                        <option value="VOID" th:selected="${searchDTO.status != null and searchDTO.status.name() == 'VOID'}">Void</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Sort By</label>
+                    <select class="form-select" name="sortBy">
+                        <option value="advanceDate" th:selected="${searchDTO.sortBy == 'advanceDate'}">Advance Date</option>
+                        <option value="advanceNumber" th:selected="${searchDTO.sortBy == 'advanceNumber'}">Advance Number</option>
+                        <option value="remainingBalance" th:selected="${searchDTO.sortBy == 'remainingBalance'}">Remaining Balance</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Direction</label>
+                    <select class="form-select" name="sortDirection">
+                        <option value="DESC" th:selected="${searchDTO.sortDirection == 'DESC'}">Descending</option>
+                        <option value="ASC" th:selected="${searchDTO.sortDirection == 'ASC'}">Ascending</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary me-2"><i class="bi bi-search me-1"></i>Search</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/advances}">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>Advance #</th>
+                        <th>Employee</th>
+                        <th>Advance Amount</th>
+                        <th>Remaining Balance</th>
+                        <th>Status</th>
+                        <th>Advance Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${advancesPage.content.isEmpty()}">
+                        <td colspan="7" class="text-center text-muted py-4">No advance records match the current filters.</td>
+                    </tr>
+                    <tr th:each="advance : ${advancesPage.content}">
+                        <td><a th:href="@{/advances/{id}(id=${advance.id})}" th:text="${advance.advanceNumber}"></a></td>
+                        <td>
+                            <span th:text="${advance.employeeFullName}"></span>
+                            <div class="text-muted small" th:text="${advance.employeeCode}"></div>
+                        </td>
+                        <td th:text="${advance.currency} + ' ' + ${#numbers.formatDecimal(advance.advanceAmount, 1, 2)}"></td>
+                        <td><strong th:text="${advance.currency} + ' ' + ${#numbers.formatDecimal(advance.remainingBalance, 1, 2)}"></strong></td>
+                        <td>
+                            <span class="badge"
+                                  th:classappend="${advance.status.name() == 'ACTIVE'} ? 'bg-primary' : (${advance.status.name() == 'CLOSED'} ? 'bg-success' : (${advance.status.name() == 'DRAFT'} ? 'bg-secondary' : 'bg-danger'))"
+                                  th:text="${advance.status}"></span>
+                        </td>
+                        <td th:text="${#temporals.format(advance.advanceDate, 'dd MMM yyyy')}"></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" th:href="@{/advances/{id}(id=${advance.id})}">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <nav class="mt-3" th:if="${advancesPage.totalPages > 1}">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${advancesPage.first} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/advances(page=${advancesPage.pageNumber - 1}, size=${advancesPage.pageSize}, employeeName=${searchDTO.employeeName}, employeeCode=${searchDTO.employeeCode}, status=${searchDTO.status}, sortBy=${searchDTO.sortBy}, sortDirection=${searchDTO.sortDirection})}">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link" th:text="'Page ' + (${advancesPage.pageNumber} + 1) + ' of ' + ${advancesPage.totalPages}"></span>
+            </li>
+            <li class="page-item" th:classappend="${advancesPage.last} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/advances(page=${advancesPage.pageNumber + 1}, size=${advancesPage.pageSize}, employeeName=${searchDTO.employeeName}, employeeCode=${searchDTO.employeeCode}, status=${searchDTO.status}, sortBy=${searchDTO.sortBy}, sortDirection=${searchDTO.sortDirection})}">Next</a>
+            </li>
+        </ul>
+    </nav>
+
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

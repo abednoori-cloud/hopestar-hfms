@@ -1,6 +1,7 @@
 package com.hopestar.hfms.module.student.service;
 
 import com.hopestar.hfms.common.dto.PageResponse;
+import com.hopestar.hfms.common.enums.SupportedCurrency;
 import com.hopestar.hfms.common.exception.BusinessValidationException;
 import com.hopestar.hfms.common.exception.DuplicateResourceException;
 import com.hopestar.hfms.common.exception.ResourceNotFoundException;
@@ -28,6 +29,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Implements {@link StudentService}. See the interface Javadoc for the
@@ -58,7 +62,7 @@ public class StudentServiceImpl implements StudentService {
         validateUniquePassport(createDTO.getPassportNumber(), null);
         validateUniqueEmail(createDTO.getEmail(), null);
 
-        Program program = resolveProgram(createDTO.getProgramId());
+        Program program = resolveOrCreateProgram(createDTO.getProgramName(), createDTO.getDestinationCountry());
         StudentStatus status = resolveStatus(createDTO.getStatusId());
         Branch branch = resolveBranch(createDTO.getBranchId());
 
@@ -74,8 +78,7 @@ public class StudentServiceImpl implements StudentService {
                 .passportNumber(normalizeBlankToNull(createDTO.getPassportNumber()))
                 .passportExpiry(createDTO.getPassportExpiry())
                 .program(program)
-                .destinationCountry(StringUtils.hasText(createDTO.getDestinationCountry())
-                        ? createDTO.getDestinationCountry() : program.getDestinationCountry())
+                .destinationCountry(program.getDestinationCountry())
                 .status(status)
                 .registrationDate(createDTO.getRegistrationDate())
                 .notes(createDTO.getNotes())
@@ -95,7 +98,7 @@ public class StudentServiceImpl implements StudentService {
         validateUniquePassport(updateDTO.getPassportNumber(), id);
         validateUniqueEmail(updateDTO.getEmail(), id);
 
-        Program program = resolveProgram(updateDTO.getProgramId());
+        Program program = resolveOrCreateProgram(updateDTO.getProgramName(), updateDTO.getDestinationCountry());
         StudentStatus status = resolveStatus(updateDTO.getStatusId());
         Branch branch = resolveBranch(updateDTO.getBranchId());
 
@@ -106,8 +109,7 @@ public class StudentServiceImpl implements StudentService {
         student.setPassportNumber(normalizeBlankToNull(updateDTO.getPassportNumber()));
         student.setPassportExpiry(updateDTO.getPassportExpiry());
         student.setProgram(program);
-        student.setDestinationCountry(StringUtils.hasText(updateDTO.getDestinationCountry())
-                ? updateDTO.getDestinationCountry() : program.getDestinationCountry());
+        student.setDestinationCountry(program.getDestinationCountry());
         student.setStatus(status);
         student.setRegistrationDate(updateDTO.getRegistrationDate());
         student.setNotes(updateDTO.getNotes());
@@ -126,6 +128,13 @@ public class StudentServiceImpl implements StudentService {
         Student student = studentRepository.findByStudentCodeAndActiveTrue(studentCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Student", studentCode));
         return toResponseDTO(student);
+    }
+
+    @Override
+    public List<StudentResponseDTO> listActive() {
+        return studentRepository.findByActiveTrueOrderByFullNameAsc().stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
     @Override
@@ -166,10 +175,27 @@ public class StudentServiceImpl implements StudentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Student", id));
     }
 
-    private Program resolveProgram(Long programId) {
-        return programRepository.findById(programId)
-                .filter(Program::isActive)
-                .orElseThrow(() -> new ResourceNotFoundException("Program", programId));
+    /**
+     * Looks up an active {@link Program} by name + destination country
+     * (case-insensitive, matching the {@code uk_programs_name_country}
+     * constraint) and links to it; if none matches, auto-creates one so
+     * staff can enter a program freely on the student form without first
+     * curating the programs master list. Auto-created rows get a
+     * placeholder {@code basePrice} of {@code 0.00} in the base currency
+     * (USD) — there is no Program admin screen yet to edit that price, so
+     * a real price must be set for the row before it is used to price a
+     * {@link com.hopestar.hfms.module.student.entity.StudentContract}.
+     */
+    private Program resolveOrCreateProgram(String programName, String destinationCountry) {
+        String trimmedName = programName.trim();
+        String trimmedCountry = destinationCountry.trim();
+        return programRepository.findByNameIgnoreCaseAndDestinationCountryIgnoreCase(trimmedName, trimmedCountry)
+                .orElseGet(() -> programRepository.save(Program.builder()
+                        .name(trimmedName)
+                        .destinationCountry(trimmedCountry)
+                        .basePrice(BigDecimal.ZERO)
+                        .currencyCode(SupportedCurrency.USD)
+                        .build()));
     }
 
     private StudentStatus resolveStatus(Long statusId) {

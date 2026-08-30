@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Implements {@link EmployeeService}. See that interface's Javadoc for
@@ -138,6 +139,13 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeRepository.findByEmployeeCodeAndActiveTrue(employeeCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee", employeeCode));
         return toResponseDTO(employee);
+    }
+
+    @Override
+    public List<EmployeeResponseDTO> listActive() {
+        return employeeRepository.findByActiveTrueOrderByFullNameAsc().stream()
+                .map(this::toResponseDTO)
+                .toList();
     }
 
     @Override

@@ -20,6 +20,8 @@ public interface StudentRepository extends JpaRepository<Student, Long>, JpaSpec
 
     Optional<Student> findByIdAndActiveTrue(Long id);
 
+    List<Student> findByActiveTrueOrderByFullNameAsc();
+
     Optional<Student> findByStudentCodeAndActiveTrue(String studentCode);
 
     Optional<Student> findByPassportNumberAndActiveTrue(String passportNumber);

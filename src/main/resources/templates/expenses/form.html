@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle=${isEdit} ? 'Edit Expense' : 'New Expense')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Expenses', url: '/expenses'},
+    {label: isEdit ? 'Edit Expense' : 'New Expense', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="card hfms-card">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0" th:if="${!isEdit}"><i class="bi bi-receipt me-2"></i>New Expense (Draft)</h5>
+                    <h5 class="mb-0" th:if="${isEdit}">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Draft Expense
+                        <span class="text-muted fs-6" th:text="'(' + ${expense.expenseNumber} + ')'"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <!-- CREATE -->
+                    <form th:if="${!isEdit}" method="post" th:action="@{/expenses}" th:object="${createDTO}" novalidate>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Category *</label>
+                                <select class="form-select" th:field="*{categoryId}"
+                                        th:classappend="${#fields.hasErrors('categoryId')} ? 'is-invalid'">
+                                    <option value="">Select…</option>
+                                    <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Expense Date *</label>
+                                <input type="date" class="form-control" th:field="*{expenseDate}"
+                                       th:classappend="${#fields.hasErrors('expenseDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('expenseDate')}" th:errors="*{expenseDate}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{amount}"
+                                       th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currency}"
+                                        th:classappend="${#fields.hasErrors('currency')} ? 'is-invalid'">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="AFN">AFN</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Description *</label>
+                                <input type="text" class="form-control" th:field="*{description}"
+                                       th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" rows="2" th:field="*{remarks}"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/expenses}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save as Draft</button>
+                        </div>
+                    </form>
+
+                    <!-- EDIT DRAFT -->
+                    <form th:if="${isEdit}" method="post" th:action="@{/expenses/{id}/edit(id=${expenseId})}" th:object="${updateDTO}" novalidate>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Category *</label>
+                                <select class="form-select" th:field="*{categoryId}"
+                                        th:classappend="${#fields.hasErrors('categoryId')} ? 'is-invalid'">
+                                    <option value="">Select…</option>
+                                    <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"></option>
+                                </select>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('categoryId')}" th:errors="*{categoryId}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Expense Date *</label>
+                                <input type="date" class="form-control" th:field="*{expenseDate}"
+                                       th:classappend="${#fields.hasErrors('expenseDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('expenseDate')}" th:errors="*{expenseDate}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Amount *</label>
+                                <input type="number" step="0.01" min="0.01" class="form-control" th:field="*{amount}"
+                                       th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('amount')}" th:errors="*{amount}"></div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Currency *</label>
+                                <select class="form-select currency-select" th:field="*{currency}"
+                                        th:classappend="${#fields.hasErrors('currency')} ? 'is-invalid'">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="AFN">AFN</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Rate to USD *</label>
+                                <input type="number" step="0.000001" min="0.000001" class="form-control exchange-rate-input"
+                                       th:field="*{exchangeRateToUsd}"
+                                       th:classappend="${#fields.hasErrors('exchangeRateToUsd')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('exchangeRateToUsd')}" th:errors="*{exchangeRateToUsd}"></div>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">Description *</label>
+                                <input type="text" class="form-control" th:field="*{description}"
+                                       th:classappend="${#fields.hasErrors('description')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label">Remarks</label>
+                                <textarea class="form-control" rows="2" th:field="*{remarks}"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-4">
+                            <a class="btn btn-outline-secondary me-2" th:href="@{/expenses/{id}(id=${expenseId})}">Cancel</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Convenience only: the server always enforces exchangeRateToUsd == 1
+    // for USD (see MoneyUtil.resolveExchangeRateToUsd, the single shared
+    // implementation used identically by every module).
+    document.querySelectorAll('.currency-select').forEach(function (select) {
+        var form = select.closest('form');
+        var rateInput = form.querySelector('.exchange-rate-input');
+        function syncRate() {
+            if (select.value === 'USD') {
+                rateInput.value = '1';
+                rateInput.setAttribute('readonly', 'readonly');
+            } else {
+                rateInput.removeAttribute('readonly');
+            }
+        }
+        select.addEventListener('change', syncRate);
+        syncRate();
+    });
+</script>
+</body>
+</html>

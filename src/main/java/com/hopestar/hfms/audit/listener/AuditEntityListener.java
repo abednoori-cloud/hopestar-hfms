@@ -1,6 +1,7 @@
 package com.hopestar.hfms.audit.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.hopestar.hfms.audit.entity.AuditLog;
 import com.hopestar.hfms.audit.repository.AuditLogRepository;
@@ -33,7 +34,8 @@ import java.time.LocalDateTime;
 public class AuditEntityListener {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .registerModule(new JavaTimeModule());
+            .registerModule(new JavaTimeModule())
+            .registerModule(new Hibernate6Module());
 
     @PostPersist
     public void onPostPersist(Object entity) {

@@ -222,6 +222,8 @@ public class StudentPaymentController {
             model.addAttribute("selectedStudent", studentService.getById(studentId));
             List<StudentContractResponseDTO> contracts = studentContractService.listByStudent(studentId);
             model.addAttribute("studentContracts", contracts);
+        } else {
+            model.addAttribute("students", studentService.listActive());
         }
     }
 }

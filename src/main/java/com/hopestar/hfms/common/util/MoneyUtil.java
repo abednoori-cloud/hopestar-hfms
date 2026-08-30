@@ -36,8 +36,18 @@ public class MoneyUtil {
         return normalize(normalize(a).subtract(normalize(b)));
     }
 
+    /**
+     * Multiplies at full precision and rounds only the final result to
+     * {@link #SCALE}. Every caller uses this for {@code amount ×
+     * exchangeRateToUsd}, where the rate is stored at {@code DECIMAL(14,6)}
+     * precisely because it needs more than 2 decimal places (e.g. AFN rates
+     * like {@code 0.015400}); pre-rounding either operand to {@link #SCALE}
+     * before multiplying would silently destroy that precision.
+     */
     public BigDecimal multiply(BigDecimal a, BigDecimal b) {
-        return normalize(normalize(a).multiply(normalize(b)));
+        BigDecimal left = a == null ? BigDecimal.ZERO : a;
+        BigDecimal right = b == null ? BigDecimal.ZERO : b;
+        return normalize(left.multiply(right));
     }
 
     public BigDecimal percentageOf(BigDecimal base, BigDecimal percentage) {

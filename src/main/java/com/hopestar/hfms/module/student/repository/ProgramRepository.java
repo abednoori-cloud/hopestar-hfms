@@ -15,4 +15,6 @@ public interface ProgramRepository extends JpaRepository<Program, Long> {
     Optional<Program> findByNameAndDestinationCountryAndActiveTrue(String name, String destinationCountry);
 
     boolean existsByNameAndDestinationCountry(String name, String destinationCountry);
+
+    Optional<Program> findByNameIgnoreCaseAndDestinationCountryIgnoreCase(String name, String destinationCountry);
 }

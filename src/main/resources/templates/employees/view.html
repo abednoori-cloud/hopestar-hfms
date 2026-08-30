@@ -29,6 +29,9 @@
             <a class="btn btn-outline-primary" th:href="@{/loans/new(employeeId=${employee.id})}">
                 <i class="bi bi-piggy-bank me-1"></i>New Loan
             </a>
+            <a class="btn btn-outline-primary" th:href="@{/advances/new(employeeId=${employee.id})}">
+                <i class="bi bi-cash-coin me-1"></i>New Advance
+            </a>
             <form th:if="${employee.active}" class="d-inline" method="post"
                   th:action="@{/employees/{id}/deactivate(id=${employee.id})}"
                   onsubmit="return confirm('Deactivate this employee? They can be reactivated later.');">

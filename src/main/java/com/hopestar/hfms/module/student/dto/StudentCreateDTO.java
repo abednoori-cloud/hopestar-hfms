@@ -44,9 +44,11 @@ public class StudentCreateDTO {
     @FutureOrPresent(message = "Passport expiry cannot be in the past")
     private LocalDate passportExpiry;
 
-    @NotNull(message = "Program is required")
-    private Long programId;
+    @NotBlank(message = "Program name is required")
+    @Size(max = 150)
+    private String programName;
 
+    @NotBlank(message = "Destination country is required")
     @Size(max = 100)
     private String destinationCountry;
 
