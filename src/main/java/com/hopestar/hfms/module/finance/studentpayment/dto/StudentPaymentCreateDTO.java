@@ -42,8 +42,6 @@ public class StudentPaymentCreateDTO {
     @NotNull(message = "Contract is required")
     private Long contractId;
 
-    private Long invoiceId;
-
     @NotNull(message = "Payment date is required")
     @PastOrPresent(message = "Payment date cannot be in the future")
     private LocalDate paymentDate;

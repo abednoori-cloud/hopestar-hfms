@@ -7,9 +7,9 @@ import lombok.NoArgsConstructor;
 
 /**
  * Result of a successful {@code FileStorageService.store(...)} call.
- * Feature modules (Student Documents today; Invoice PDFs and Backup
- * dumps in later phases) persist these fields onto their own entities
- * rather than re-deriving storage paths themselves.
+ * Feature modules (Student Documents today; Backup dumps in later phases)
+ * persist these fields onto their own entities rather than re-deriving
+ * storage paths themselves.
  */
 @Getter
 @Builder

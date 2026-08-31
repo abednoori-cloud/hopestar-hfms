@@ -2,7 +2,7 @@ package com.hopestar.hfms.common.exception;
 
 /**
  * Thrown when a lookup by id/code finds no matching, active record
- * (e.g. a student, invoice, or user that does not exist or was
+ * (e.g. a student, payment, or user that does not exist or was
  * soft-deleted). Mapped to HTTP 404 by {@link GlobalExceptionHandler}.
  */
 public class ResourceNotFoundException extends RuntimeException {

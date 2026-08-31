@@ -10,7 +10,8 @@ import java.time.format.DateTimeFormatter;
 /**
  * Shared date/time helpers used across modules — e.g. the Finance module's
  * salary period keys, the Report module's date-range filters, and the
- * Invoice module's yearly sequence reset (approved architecture §6).
+ * yearly reset of student/receipt number sequences (approved architecture
+ * §6).
  */
 @UtilityClass
 public class DateUtil {

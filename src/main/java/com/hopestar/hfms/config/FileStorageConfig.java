@@ -13,10 +13,10 @@ import java.nio.file.Path;
 
 /**
  * Activates {@link FileStorageProperties} and guarantees the configured
- * storage directories (documents, invoices, backups) exist at startup, so
- * later modules (Student Documents, Invoice PDFs, Backup & Restore) can
- * assume the directories are already present rather than each
- * re-implementing directory-creation logic.
+ * storage directories (documents, receipts, backups) exist at startup, so
+ * later modules (Student Documents, Backup & Restore) can assume the
+ * directories are already present rather than each re-implementing
+ * directory-creation logic.
  */
 @Slf4j
 @Configuration
@@ -29,7 +29,7 @@ public class FileStorageConfig {
     @PostConstruct
     public void initStorageDirectories() {
         createDirectoryIfMissing(fileStorageProperties.getDocumentsPath());
-        createDirectoryIfMissing(fileStorageProperties.getInvoicesPath());
+        createDirectoryIfMissing(fileStorageProperties.getReceiptsPath());
         createDirectoryIfMissing(fileStorageProperties.getBackupPath());
     }
 

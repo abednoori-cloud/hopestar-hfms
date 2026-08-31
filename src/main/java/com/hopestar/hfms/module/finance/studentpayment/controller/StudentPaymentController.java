@@ -4,7 +4,11 @@ import com.hopestar.hfms.common.dto.PageResponse;
 import com.hopestar.hfms.common.enums.SupportedCurrency;
 import com.hopestar.hfms.common.exception.BusinessValidationException;
 import com.hopestar.hfms.common.exception.ResourceNotFoundException;
+import com.hopestar.hfms.common.service.PdfGenerationService;
+import com.hopestar.hfms.module.auth.service.BranchService;
+import com.hopestar.hfms.module.finance.ledger.entity.TransactionStatus;
 import com.hopestar.hfms.module.finance.ledger.service.CurrencyService;
+import com.hopestar.hfms.module.finance.ledger.service.LedgerService;
 import com.hopestar.hfms.module.finance.ledger.service.PaymentMethodService;
 import com.hopestar.hfms.module.finance.studentpayment.dto.StudentPaymentCreateDTO;
 import com.hopestar.hfms.module.finance.studentpayment.dto.StudentPaymentResponseDTO;
@@ -16,7 +20,10 @@ import com.hopestar.hfms.module.student.dto.StudentContractResponseDTO;
 import com.hopestar.hfms.module.student.service.StudentContractService;
 import com.hopestar.hfms.module.student.service.StudentService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -26,6 +33,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import java.util.List;
 
@@ -36,7 +45,6 @@ import java.util.List;
  * validation lives in {@link StudentPaymentService}.
  */
 @Controller
-@RequiredArgsConstructor
 public class StudentPaymentController {
 
     private final StudentPaymentService studentPaymentService;
@@ -44,6 +52,30 @@ public class StudentPaymentController {
     private final StudentContractService studentContractService;
     private final CurrencyService currencyService;
     private final PaymentMethodService paymentMethodService;
+    private final LedgerService ledgerService;
+    private final BranchService branchService;
+    private final PdfGenerationService pdfGenerationService;
+    private final TemplateEngine pdfTemplateEngine;
+
+    public StudentPaymentController(StudentPaymentService studentPaymentService,
+                                     StudentService studentService,
+                                     StudentContractService studentContractService,
+                                     CurrencyService currencyService,
+                                     PaymentMethodService paymentMethodService,
+                                     LedgerService ledgerService,
+                                     BranchService branchService,
+                                     PdfGenerationService pdfGenerationService,
+                                     @Qualifier("pdfTemplateEngine") TemplateEngine pdfTemplateEngine) {
+        this.studentPaymentService = studentPaymentService;
+        this.studentService = studentService;
+        this.studentContractService = studentContractService;
+        this.currencyService = currencyService;
+        this.paymentMethodService = paymentMethodService;
+        this.ledgerService = ledgerService;
+        this.branchService = branchService;
+        this.pdfGenerationService = pdfGenerationService;
+        this.pdfTemplateEngine = pdfTemplateEngine;
+    }
 
     // ---------------------------------------------------------------
     // List / Search
@@ -109,6 +141,38 @@ public class StudentPaymentController {
     public String view(@PathVariable Long id, Model model) {
         model.addAttribute("payment", studentPaymentService.getById(id));
         return "payments/view";
+    }
+
+    // ---------------------------------------------------------------
+    // Receipt PDF
+    // ---------------------------------------------------------------
+
+    /**
+     * Renders and streams a downloadable PDF receipt for this payment.
+     * Purely a printable representation of the already-existing {@code
+     * StudentPayment} record -- generated on demand, nothing persisted to
+     * disk (see the Receipt/Voucher PDF design notes).
+     */
+    @GetMapping("/payments/{id}/receipt/pdf")
+    public ResponseEntity<byte[]> receiptPdf(@PathVariable Long id) {
+        StudentPaymentResponseDTO payment = studentPaymentService.getById(id);
+
+        boolean voided = payment.getTransactionId() != null
+                && ledgerService.findTransaction(payment.getTransactionId()).getStatus() == TransactionStatus.VOIDED;
+
+        Context context = new Context();
+        context.setVariable("payment", payment);
+        context.setVariable("office", branchService.getHeadquarters());
+        context.setVariable("voided", voided);
+
+        String html = pdfTemplateEngine.process("payments/receipt-pdf", context);
+        byte[] pdfBytes = pdfGenerationService.renderToPdf(html);
+
+        String filename = "Receipt-" + payment.getReceiptNumber() + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     // ---------------------------------------------------------------

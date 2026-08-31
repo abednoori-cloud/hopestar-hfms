@@ -64,15 +64,12 @@ management:
 hfms:
   file-storage:
     documents-path: ${HFMS_DOCS_PATH:./data/documents}
-    invoices-path: ${HFMS_INVOICES_PATH:./data/invoices}
+    receipts-path: ${HFMS_RECEIPTS_PATH:./data/receipts}
     backup-path: ${HFMS_BACKUP_PATH:./data/backups}
     max-file-size-mb: 10
 
   security:
     max-failed-login-attempts: 5
-
-  invoice:
-    number-prefix: INV
 
   student:
     code-prefix: STU

@@ -31,7 +31,7 @@ import java.time.LocalDate;
 /**
  * The central ledger row. Every financial event in the system — student
  * payments, English test payments, salaries, expenses, loans, advances,
- * refunds, invoices — is represented here, and here only. Per the
+ * refunds — is represented here, and here only. Per the
  * approved architecture's Finance module design, no submodule ever
  * inserts a {@code Transaction} directly; every one of them is created
  * by {@link com.hopestar.hfms.module.finance.ledger.service.LedgerService},

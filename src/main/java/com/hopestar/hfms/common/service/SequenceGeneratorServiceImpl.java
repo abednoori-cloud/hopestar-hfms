@@ -16,7 +16,7 @@ import java.time.Year;
 /**
  * Implements {@link SequenceGeneratorService} using a pessimistically
  * locked {@code number_sequences} row per counter, per the approved
- * Invoice Numbering Strategy (Section 6).
+ * Numbering Strategy (Section 6).
  * <p>
  * Runs in its own {@code REQUIRES_NEW} transaction so a generated number
  * is never reused even if the caller's outer transaction (e.g. saving the

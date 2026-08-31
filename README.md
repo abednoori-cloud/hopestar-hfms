@@ -2,13 +2,13 @@
 
 Production system for HopeStar Education Consultancy: student records, English
 test registrations, employee finance (salary/loans/advances), office expenses,
-invoicing, reporting, and backup/restore — built on the approved Software
-Architecture & Implementation Plan.
+PDF receipts/vouchers, reporting, and backup/restore — built on the approved
+Software Architecture & Implementation Plan.
 
 > **Status:** Phase 1 — Project Foundation.
 > Identity/security schema, configuration, and cross-cutting infrastructure
-> are in place. Feature modules (Student, English Test, Finance, Invoice,
-> Report, Backup, Settings) are implemented incrementally in later phases,
+> are in place. Feature modules (Student, English Test, Finance, Report,
+> Backup, Settings) are implemented incrementally in later phases,
 > per the approved architecture's package structure and module boundaries.
 
 ---
@@ -52,7 +52,7 @@ hopestar-hfms/
 │   ├── scheduler/              # Scheduled jobs (backup, reminders — later phases)
 │   └── module/
 │       └── auth/                # User, Role, Permission, RolePermission, Branch
-│           (dashboard/, student/, englishtest/, finance/, invoice/, report/,
+│           (dashboard/, student/, englishtest/, finance/, report/,
 │            backup/, settings/ modules are added in subsequent phases)
 └── src/main/resources/
     ├── application.yml, application-dev.yml, application-prod.yml
@@ -74,11 +74,11 @@ dev, staging, and production without code changes.
 | `DB_USERNAME`, `DB_PASSWORD` | database credentials | `hfms_user` / `hfms_password` |
 | `SERVER_PORT` | HTTP port | `8080` |
 | `HFMS_DOCS_PATH` | student document storage root | `./data/documents` |
-| `HFMS_INVOICES_PATH` | generated invoice PDF storage root | `./data/invoices` |
+| `HFMS_RECEIPTS_PATH` | reserved storage root for a possible future "persist generated receipt/voucher PDFs" feature (unused today -- PDFs are generated on demand, never written to disk) | `./data/receipts` |
 | `HFMS_BACKUP_PATH` | database backup dump storage root | `./data/backups` |
 
 See `application.yml` for the full list of `hfms.*` application-specific
-settings (invoice/student/employee code prefixes, backup schedule/retention,
+settings (student/employee code prefixes, backup schedule/retention,
 account-lockout threshold).
 
 ## 5. Running Locally (without Docker)
@@ -112,7 +112,7 @@ docker compose up --build
 ```
 
 This starts MySQL 8 and the HFMS app together, with named volumes for the
-database, uploaded documents, generated invoices, backups, and logs.
+database, uploaded documents, receipts, backups, and logs.
 
 ## 7. Default Administrator Account
 
@@ -156,7 +156,7 @@ New migrations go in `src/main/resources/db/migration/`, named
 Per the approved architecture, subsequent phases add, module by module:
 `module/dashboard`, `module/student`, `module/englishtest`,
 `module/finance` (ledger, student payments, employee, salary, loan,
-advance, expense, refund), `module/invoice`, `module/report`,
+advance, expense, refund, PDF receipts/vouchers), `module/report`,
 `module/backup`, `module/settings`, plus the Thymeleaf templates,
 Controllers, and Services for each. No changes to this foundation
 (package structure, database design, or configuration) are expected as

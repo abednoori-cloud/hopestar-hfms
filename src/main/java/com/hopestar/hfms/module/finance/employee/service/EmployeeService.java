@@ -14,7 +14,7 @@ import java.util.List;
  * <ul>
  *   <li>employee codes are always system-generated ({@code EMP-2026-000001}),
  *       via {@code SequenceGeneratorService} — the same mechanism used for
- *       student codes, invoice numbers, and transaction codes;</li>
+ *       student codes, receipt numbers, and transaction codes;</li>
  *   <li>phone, email, and national ID must each be unique when provided;</li>
  *   <li>USD forces {@code exchangeRateToUsd = 1.0000}; AFN/EUR require a
  *       positive, manually-entered rate — enforced via the single shared

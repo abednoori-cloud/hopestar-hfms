@@ -14,8 +14,8 @@ public interface NumberSequenceRepository extends JpaRepository<NumberSequence, 
     /**
      * Locks the matching sequence row ({@code SELECT ... FOR UPDATE}) so
      * concurrent callers serialize on this row rather than racing to
-     * increment {@code lastValue}, per the approved Invoice Numbering
-     * Strategy (§6). Must only be called from within an active
+     * increment {@code lastValue}, per the approved Numbering Strategy
+     * (§6). Must only be called from within an active
      * transaction (see {@code SequenceGeneratorServiceImpl}).
      *
      * @param sequenceYear the year to scope by, or {@code 0} for

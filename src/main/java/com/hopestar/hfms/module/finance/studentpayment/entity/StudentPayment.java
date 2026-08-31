@@ -75,14 +75,6 @@ public class StudentPayment extends BaseEntity {
     @Column(name = "receipt_number", nullable = false, length = 30, updatable = false)
     private String receiptNumber;
 
-    /**
-     * Plain nullable column, not a foreign key: the Invoice module does
-     * not exist yet (a later phase). See this entity's companion
-     * migration, {@code V6__student_payments.sql}.
-     */
-    @Column(name = "invoice_id")
-    private Long invoiceId;
-
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "student_id", nullable = false, foreignKey = @ForeignKey(name = "fk_student_payments_student"))

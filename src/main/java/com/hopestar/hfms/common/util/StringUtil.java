@@ -4,10 +4,9 @@ import lombok.experimental.UtilityClass;
 
 /**
  * Small string helpers shared across modules — most notably
- * {@link #padSequence} which the future
- * {@code SequenceGeneratorService} (Invoice/Student/Employee/Transaction
- * numbering, approved architecture §6) will use to zero-pad sequence
- * values to the configured width.
+ * {@link #padSequence}, which {@code SequenceGeneratorService}
+ * (Student/Employee/Transaction/Receipt numbering, approved architecture
+ * §6) uses to zero-pad sequence values to the configured width.
  */
 @UtilityClass
 public class StringUtil {

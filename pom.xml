@@ -83,6 +83,15 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PDF generation: renders a Thymeleaf-produced XHTML string to a
+             PDF (receipts, vouchers). Not managed by the Spring Boot BOM,
+             hence the explicit version. -->
+        <dependency>
+            <groupId>com.openhtmltopdf</groupId>
+            <artifactId>openhtmltopdf-pdfbox</artifactId>
+            <version>1.0.10</version>
+        </dependency>
+
         <!-- Flyway -->
         <dependency>
             <groupId>org.flywaydb</groupId>

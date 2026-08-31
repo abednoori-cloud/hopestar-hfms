@@ -21,7 +21,7 @@ WORKDIR /app
 
 # Run as a non-root user
 RUN groupadd -r hfms && useradd -r -g hfms hfms
-RUN mkdir -p /app/data/documents /app/data/invoices /app/data/backups /var/log/hfms \
+RUN mkdir -p /app/data/documents /app/data/receipts /app/data/backups /var/log/hfms \
     && chown -R hfms:hfms /app /var/log/hfms
 
 COPY --from=build /build/target/hfms.jar /app/hfms.jar
@@ -32,7 +32,7 @@ USER hfms
 ENV HFMS_PROFILE=prod \
     SERVER_PORT=8080 \
     HFMS_DOCS_PATH=/app/data/documents \
-    HFMS_INVOICES_PATH=/app/data/invoices \
+    HFMS_RECEIPTS_PATH=/app/data/receipts \
     HFMS_BACKUP_PATH=/app/data/backups
 
 EXPOSE 8080

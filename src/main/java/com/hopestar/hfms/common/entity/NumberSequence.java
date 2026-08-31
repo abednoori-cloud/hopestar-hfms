@@ -16,13 +16,13 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * Backs the atomic, gap-free business-key generator described in the
- * approved architecture's Invoice Numbering Strategy (§6): one shared
- * mechanism, reused for student codes, employee codes, invoice numbers,
- * and transaction codes, rather than a bespoke counter per module.
+ * approved architecture's Numbering Strategy (§6): one shared mechanism,
+ * reused for student codes, employee codes, receipt numbers, and
+ * transaction codes, rather than a bespoke counter per module.
  * <p>
  * A row is keyed by {@code sequenceKey} (e.g. {@code "STUDENT"},
- * {@code "INVOICE"}), optionally scoped by {@code year} (for sequences
- * that reset annually, like invoices) and by {@code branchId} (so
+ * {@code "STUDENT_PAYMENT_RECEIPT"}), optionally scoped by {@code year}
+ * (for sequences that reset annually) and by {@code branchId} (so
  * Multi-branch Support, once enabled, does not require renumbering
  * anything — see approved architecture §8). {@link
  * com.hopestar.hfms.common.service.SequenceGeneratorServiceImpl} increments
@@ -49,13 +49,13 @@ public class NumberSequence {
     @Column(name = "id")
     private Long id;
 
-    /** e.g. STUDENT, EMPLOYEE, INVOICE, TRANSACTION. */
+    /** e.g. STUDENT, EMPLOYEE, TRANSACTION. */
     @Column(name = "sequence_key", nullable = false, length = 30)
     private String sequenceKey;
 
     /**
      * The calendar year this counter applies to, for sequences that reset
-     * yearly (e.g. student codes, invoice numbers). {@code 0} is the
+     * yearly (e.g. student codes, receipt numbers). {@code 0} is the
      * sentinel for "not year-scoped" (e.g. employee codes) -- kept
      * non-null because MySQL treats NULL as distinct in unique indexes,
      * which would defeat the uniqueness guarantee on this table.

@@ -7,8 +7,8 @@ import com.hopestar.hfms.module.finance.ledger.dto.TransactionResponseDTO;
  * The single entry point for posting money movement to the central
  * ledger ({@code transactions}). Per the approved Finance module
  * architecture, every current and future submodule (Student Payments,
- * English Test Payments, Salary, Loans, Advances, Expenses, Refunds,
- * Invoices) calls one of the methods below instead of ever constructing
+ * English Test Payments, Salary, Loans, Advances, Expenses, Refunds)
+ * calls one of the methods below instead of ever constructing
  * or persisting a {@link com.hopestar.hfms.module.finance.ledger.entity.Transaction}
  * itself. This is what guarantees the Dashboard and Reports (later
  * phases) always reconcile against one consistent source of truth.

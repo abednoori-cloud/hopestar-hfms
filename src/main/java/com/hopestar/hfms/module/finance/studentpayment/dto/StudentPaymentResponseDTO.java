@@ -28,7 +28,6 @@ public class StudentPaymentResponseDTO extends BaseAuditDTO {
 
     private String paymentNumber;
     private String receiptNumber;
-    private Long invoiceId;
 
     private Long studentId;
     private String studentCode;

@@ -3,6 +3,8 @@ package com.hopestar.hfms.module.finance.expense.controller;
 import com.hopestar.hfms.common.dto.PageResponse;
 import com.hopestar.hfms.common.exception.BusinessValidationException;
 import com.hopestar.hfms.common.exception.ResourceNotFoundException;
+import com.hopestar.hfms.common.service.PdfGenerationService;
+import com.hopestar.hfms.module.auth.service.BranchService;
 import com.hopestar.hfms.module.finance.expense.dto.ExpenseCreateDTO;
 import com.hopestar.hfms.module.finance.expense.dto.ExpenseResponseDTO;
 import com.hopestar.hfms.module.finance.expense.dto.ExpenseSearchDTO;
@@ -10,9 +12,15 @@ import com.hopestar.hfms.module.finance.expense.dto.ExpenseUpdateDTO;
 import com.hopestar.hfms.module.finance.expense.entity.ExpenseStatus;
 import com.hopestar.hfms.module.finance.expense.service.ExpenseCategoryService;
 import com.hopestar.hfms.module.finance.expense.service.ExpenseService;
+import com.hopestar.hfms.module.finance.ledger.dto.TransactionResponseDTO;
+import com.hopestar.hfms.module.finance.ledger.entity.TransactionStatus;
+import com.hopestar.hfms.module.finance.ledger.service.LedgerService;
 import com.hopestar.hfms.module.finance.ledger.service.PaymentMethodService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -23,6 +31,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 /**
  * MVC controller for the Expenses module: list/search/sort/paginate,
@@ -33,12 +43,31 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  */
 @Controller
 @RequestMapping("/expenses")
-@RequiredArgsConstructor
 public class ExpenseController {
 
     private final ExpenseService expenseService;
     private final ExpenseCategoryService expenseCategoryService;
     private final PaymentMethodService paymentMethodService;
+    private final LedgerService ledgerService;
+    private final BranchService branchService;
+    private final PdfGenerationService pdfGenerationService;
+    private final TemplateEngine pdfTemplateEngine;
+
+    public ExpenseController(ExpenseService expenseService,
+                              ExpenseCategoryService expenseCategoryService,
+                              PaymentMethodService paymentMethodService,
+                              LedgerService ledgerService,
+                              BranchService branchService,
+                              PdfGenerationService pdfGenerationService,
+                              @Qualifier("pdfTemplateEngine") TemplateEngine pdfTemplateEngine) {
+        this.expenseService = expenseService;
+        this.expenseCategoryService = expenseCategoryService;
+        this.paymentMethodService = paymentMethodService;
+        this.ledgerService = ledgerService;
+        this.branchService = branchService;
+        this.pdfGenerationService = pdfGenerationService;
+        this.pdfTemplateEngine = pdfTemplateEngine;
+    }
 
     // ---------------------------------------------------------------
     // List / Search / Sort / Paginate
@@ -97,6 +126,44 @@ public class ExpenseController {
         model.addAttribute("expense", expenseService.getById(id));
         model.addAttribute("paymentMethods", paymentMethodService.listActive());
         return "expenses/view";
+    }
+
+    // ---------------------------------------------------------------
+    // Voucher PDF
+    // ---------------------------------------------------------------
+
+    /**
+     * Renders and streams a downloadable PDF voucher for this expense.
+     * Purely a printable representation of the already-existing {@code
+     * Expense} record -- generated on demand, nothing persisted to disk
+     * (see the Receipt/Voucher PDF design notes).
+     */
+    @GetMapping("/{id}/voucher/pdf")
+    public ResponseEntity<byte[]> voucherPdf(@PathVariable Long id) {
+        ExpenseResponseDTO expense = expenseService.getById(id);
+
+        String paymentMethodName = null;
+        boolean voided = false;
+        if (expense.getLedgerTransactionId() != null) {
+            TransactionResponseDTO transaction = ledgerService.findTransaction(expense.getLedgerTransactionId());
+            paymentMethodName = transaction.getPaymentMethod().getName();
+            voided = transaction.getStatus() == TransactionStatus.VOIDED;
+        }
+
+        Context context = new Context();
+        context.setVariable("expense", expense);
+        context.setVariable("office", branchService.getHeadquarters());
+        context.setVariable("paymentMethodName", paymentMethodName);
+        context.setVariable("voided", voided);
+
+        String html = pdfTemplateEngine.process("expenses/voucher-pdf", context);
+        byte[] pdfBytes = pdfGenerationService.renderToPdf(html);
+
+        String filename = "Voucher-" + expense.getExpenseNumber() + ".pdf";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdfBytes);
     }
 
     // ---------------------------------------------------------------

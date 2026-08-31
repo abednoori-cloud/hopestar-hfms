@@ -2,9 +2,9 @@ package com.hopestar.hfms.common.service;
 
 /**
  * Generates unique, gap-free, human-readable business keys (student codes,
- * employee codes, invoice numbers, transaction codes) per the approved
- * Invoice Numbering Strategy (§6): one shared mechanism instead of a
- * bespoke counter per module.
+ * employee codes, receipt numbers, transaction codes) per the approved
+ * Numbering Strategy (§6): one shared mechanism instead of a bespoke
+ * counter per module.
  */
 public interface SequenceGeneratorService {
 

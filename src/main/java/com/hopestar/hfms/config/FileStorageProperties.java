@@ -9,9 +9,14 @@ import java.util.List;
 /**
  * Binds the {@code hfms.file-storage.*} keys from application.yml.
  * Governs where uploaded student documents (passport, diploma, transcript,
- * English certificate, contract per SRS Module 3), generated invoice PDFs,
- * and database backup dumps are written, and the constraints enforced on
- * uploads per the approved architecture's Security Architecture §5.3.
+ * English certificate, contract per SRS Module 3) and database backup
+ * dumps are written, and the constraints enforced on uploads per the
+ * approved architecture's Security Architecture §5.3.
+ * <p>
+ * {@link #receiptsPath} is reserved storage for a possible future
+ * "save a permanent copy" feature; today's Receipt/Voucher PDFs (Student
+ * Payments, Expenses) are generated on demand per download and never
+ * written here -- see {@code PdfGenerationService}'s design notes.
  */
 @Getter
 @Setter
@@ -25,8 +30,8 @@ public class FileStorageProperties {
      */
     private String documentsPath = "./data/documents";
 
-    /** Directory where generated invoice PDFs are written. */
-    private String invoicesPath = "./data/invoices";
+    /** Directory reserved for permanently-saved receipt/voucher PDFs, if ever needed. */
+    private String receiptsPath = "./data/receipts";
 
     /** Directory where database backup dumps are written by default. */
     private String backupPath = "./data/backups";

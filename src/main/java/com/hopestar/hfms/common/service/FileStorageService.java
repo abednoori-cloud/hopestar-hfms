@@ -7,7 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
  * Validates and persists uploaded files to the storage roots configured by
  * {@link com.hopestar.hfms.config.FileStorageProperties} (established in
  * Phase 1). Every module that accepts an upload — Student Documents today,
- * Invoice PDFs and Backup dumps in later phases — goes through this
+ * Backup dumps in later phases — goes through this
  * service rather than touching the filesystem directly, per the approved
  * Security Architecture (§5.3): MIME-type allowlist, file-size cap, and
  * UUID-randomized filenames stored outside the web root.

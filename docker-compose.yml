@@ -41,13 +41,13 @@ services:
       - "8080:8080"
     volumes:
       - hfms-documents:/app/data/documents
-      - hfms-invoices:/app/data/invoices
+      - hfms-receipts:/app/data/receipts
       - hfms-backups:/app/data/backups
       - hfms-logs:/var/log/hfms
 
 volumes:
   hfms-mysql-data:
   hfms-documents:
-  hfms-invoices:
+  hfms-receipts:
   hfms-backups:
   hfms-logs:
