@@ -2,14 +2,20 @@ package com.hopestar.hfms.module.dashboard.service;
 
 import com.hopestar.hfms.common.enums.SupportedCurrency;
 import com.hopestar.hfms.module.dashboard.dto.DashboardSummaryDTO;
+import com.hopestar.hfms.module.finance.advance.entity.AdvanceStatus;
+import com.hopestar.hfms.module.finance.advance.repository.EmployeeAdvanceRepository;
 import com.hopestar.hfms.module.finance.employee.entity.Employee;
 import com.hopestar.hfms.module.finance.employee.repository.EmployeeRepository;
+import com.hopestar.hfms.module.finance.expense.entity.ExpenseStatus;
+import com.hopestar.hfms.module.finance.expense.repository.ExpenseRepository;
 import com.hopestar.hfms.module.finance.ledger.entity.Currency;
 import com.hopestar.hfms.module.finance.ledger.entity.Direction;
 import com.hopestar.hfms.module.finance.ledger.entity.Transaction;
 import com.hopestar.hfms.module.finance.ledger.entity.TransactionStatus;
 import com.hopestar.hfms.module.finance.ledger.entity.TransactionType;
 import com.hopestar.hfms.module.finance.ledger.repository.TransactionRepository;
+import com.hopestar.hfms.module.finance.loan.entity.LoanStatus;
+import com.hopestar.hfms.module.finance.loan.repository.EmployeeLoanRepository;
 import com.hopestar.hfms.module.finance.salary.entity.Salary;
 import com.hopestar.hfms.module.finance.salary.entity.SalaryPaymentStatus;
 import com.hopestar.hfms.module.finance.salary.repository.SalaryRepository;
@@ -60,6 +66,9 @@ class DashboardServiceImplTest {
     @Mock private SalaryRepository salaryRepository;
     @Mock private StudentRepository studentRepository;
     @Mock private EmployeeRepository employeeRepository;
+    @Mock private EmployeeLoanRepository employeeLoanRepository;
+    @Mock private EmployeeAdvanceRepository employeeAdvanceRepository;
+    @Mock private ExpenseRepository expenseRepository;
 
     @InjectMocks
     private DashboardServiceImpl dashboardService;
@@ -94,6 +103,15 @@ class DashboardServiceImplTest {
         lenient().when(studentRepository.countByActiveTrue()).thenReturn(0L);
         lenient().when(studentRepository.countActiveStudentsGroupedByStatus()).thenReturn(List.of());
         lenient().when(employeeRepository.countByActiveTrue()).thenReturn(0L);
+
+        lenient().when(employeeLoanRepository.countByStatusAndActiveTrue(any())).thenReturn(0L);
+        lenient().when(employeeLoanRepository.sumRemainingBalanceUsdByStatusAndActiveTrue(any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(employeeAdvanceRepository.countByStatusAndActiveTrue(any())).thenReturn(0L);
+        lenient().when(employeeAdvanceRepository.sumRemainingBalanceUsdByStatusAndActiveTrue(any()))
+                .thenReturn(BigDecimal.ZERO);
+        lenient().when(expenseRepository.sumUsdEquivalentAmountByStatusAndDateRange(any(), any(), any()))
+                .thenReturn(BigDecimal.ZERO);
     }
 
     private Student student(long id, String code, String name) {
@@ -226,6 +244,31 @@ class DashboardServiceImplTest {
     }
 
     // ---------------------------------------------------------------
+    // Loans / advances / expenses
+    // ---------------------------------------------------------------
+
+    @Test
+    void loanAdvanceExpenseSummary_reportsActiveCountsAndOutstandingAndMonthExpense() {
+        when(employeeLoanRepository.countByStatusAndActiveTrue(LoanStatus.ACTIVE)).thenReturn(2L);
+        when(employeeLoanRepository.sumRemainingBalanceUsdByStatusAndActiveTrue(LoanStatus.ACTIVE))
+                .thenReturn(new BigDecimal("520.02"));
+        when(employeeAdvanceRepository.countByStatusAndActiveTrue(AdvanceStatus.ACTIVE)).thenReturn(1L);
+        when(employeeAdvanceRepository.sumRemainingBalanceUsdByStatusAndActiveTrue(AdvanceStatus.ACTIVE))
+                .thenReturn(new BigDecimal("300.00"));
+        when(expenseRepository.sumUsdEquivalentAmountByStatusAndDateRange(eq(ExpenseStatus.POSTED), any(), any()))
+                .thenReturn(new BigDecimal("150.00"));
+
+        DashboardSummaryDTO summary = dashboardService.getDashboardSummary();
+
+        assertThat(summary.getLoanAdvanceExpenseSummary().getActiveLoanCount()).isEqualTo(2L);
+        assertThat(summary.getLoanAdvanceExpenseSummary().getLoanOutstandingUsd()).isEqualByComparingTo("520.02");
+        assertThat(summary.getLoanAdvanceExpenseSummary().getActiveAdvanceCount()).isEqualTo(1L);
+        assertThat(summary.getLoanAdvanceExpenseSummary().getAdvanceOutstandingUsd()).isEqualByComparingTo("300.00");
+        assertThat(summary.getLoanAdvanceExpenseSummary().getCurrentPeriodExpenseUsd()).isEqualByComparingTo("150.00");
+        assertThat(summary.getLoanAdvanceExpenseSummary().getCurrentPeriodLabel()).isNotBlank();
+    }
+
+    // ---------------------------------------------------------------
     // Recent transactions
     // ---------------------------------------------------------------
 
@@ -256,6 +299,11 @@ class DashboardServiceImplTest {
         assertThat(summary.getOutstandingReceivables().getTotalOutstandingUsd()).isEqualByComparingTo("0.00");
         assertThat(summary.getOutstandingReceivables().getTopOutstandingContracts()).isEmpty();
         assertThat(summary.getSalaryOverview().getPendingSalaries()).isEmpty();
+        assertThat(summary.getLoanAdvanceExpenseSummary().getActiveLoanCount()).isZero();
+        assertThat(summary.getLoanAdvanceExpenseSummary().getLoanOutstandingUsd()).isEqualByComparingTo("0.00");
+        assertThat(summary.getLoanAdvanceExpenseSummary().getActiveAdvanceCount()).isZero();
+        assertThat(summary.getLoanAdvanceExpenseSummary().getAdvanceOutstandingUsd()).isEqualByComparingTo("0.00");
+        assertThat(summary.getLoanAdvanceExpenseSummary().getCurrentPeriodExpenseUsd()).isEqualByComparingTo("0.00");
         assertThat(summary.getRecentTransactions()).isEmpty();
         assertThat(summary.getStats().getActiveStudentCount()).isZero();
         assertThat(summary.getStats().getActiveEmployeeCount()).isZero();

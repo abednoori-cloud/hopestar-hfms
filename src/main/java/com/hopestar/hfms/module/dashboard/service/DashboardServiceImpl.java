@@ -3,17 +3,24 @@ package com.hopestar.hfms.module.dashboard.service;
 import com.hopestar.hfms.common.util.MoneyUtil;
 import com.hopestar.hfms.module.dashboard.dto.DashboardSummaryDTO;
 import com.hopestar.hfms.module.dashboard.dto.FinancialSummaryDTO;
+import com.hopestar.hfms.module.dashboard.dto.LoanAdvanceExpenseSummaryDTO;
 import com.hopestar.hfms.module.dashboard.dto.OutstandingContractDTO;
 import com.hopestar.hfms.module.dashboard.dto.OutstandingReceivablesDTO;
 import com.hopestar.hfms.module.dashboard.dto.PendingSalaryDTO;
 import com.hopestar.hfms.module.dashboard.dto.RecentTransactionDTO;
 import com.hopestar.hfms.module.dashboard.dto.SalaryOverviewDTO;
 import com.hopestar.hfms.module.dashboard.dto.StudentEmployeeStatsDTO;
+import com.hopestar.hfms.module.finance.advance.entity.AdvanceStatus;
+import com.hopestar.hfms.module.finance.advance.repository.EmployeeAdvanceRepository;
 import com.hopestar.hfms.module.finance.employee.repository.EmployeeRepository;
+import com.hopestar.hfms.module.finance.expense.entity.ExpenseStatus;
+import com.hopestar.hfms.module.finance.expense.repository.ExpenseRepository;
 import com.hopestar.hfms.module.finance.ledger.entity.Direction;
 import com.hopestar.hfms.module.finance.ledger.entity.Transaction;
 import com.hopestar.hfms.module.finance.ledger.entity.TransactionStatus;
 import com.hopestar.hfms.module.finance.ledger.repository.TransactionRepository;
+import com.hopestar.hfms.module.finance.loan.entity.LoanStatus;
+import com.hopestar.hfms.module.finance.loan.repository.EmployeeLoanRepository;
 import com.hopestar.hfms.module.finance.salary.entity.Salary;
 import com.hopestar.hfms.module.finance.salary.entity.SalaryPaymentStatus;
 import com.hopestar.hfms.module.finance.salary.repository.SalaryRepository;
@@ -61,6 +68,9 @@ public class DashboardServiceImpl implements DashboardService {
     private final SalaryRepository salaryRepository;
     private final StudentRepository studentRepository;
     private final EmployeeRepository employeeRepository;
+    private final EmployeeLoanRepository employeeLoanRepository;
+    private final EmployeeAdvanceRepository employeeAdvanceRepository;
+    private final ExpenseRepository expenseRepository;
 
     @Override
     public DashboardSummaryDTO getDashboardSummary() {
@@ -68,6 +78,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .financialSummary(buildFinancialSummary())
                 .outstandingReceivables(buildOutstandingReceivables())
                 .salaryOverview(buildSalaryOverview())
+                .loanAdvanceExpenseSummary(buildLoanAdvanceExpenseSummary())
                 .recentTransactions(buildRecentTransactions())
                 .stats(buildStats())
                 .build();
@@ -200,6 +211,42 @@ public class DashboardServiceImpl implements DashboardService {
                 .currentPeriodPostedCount(currentPeriodPosted)
                 .currentPeriodLabel(monthLabel(today))
                 .pendingSalaries(pendingDTOs)
+                .build();
+    }
+
+    // ---------------------------------------------------------------
+    // Loans / advances / expenses (section 5.5)
+    // ---------------------------------------------------------------
+
+    /**
+     * Loan/advance figures are scoped to {@code ACTIVE} records only,
+     * mirroring the outstanding-receivables widget's {@code ACTIVE}-only
+     * scoping. The expense figure is the current calendar month's {@code
+     * POSTED} total, computed with the same first-of-month/last-of-month
+     * date range used by {@link #buildFinancialSummary()}.
+     */
+    private LoanAdvanceExpenseSummaryDTO buildLoanAdvanceExpenseSummary() {
+        long activeLoanCount = employeeLoanRepository.countByStatusAndActiveTrue(LoanStatus.ACTIVE);
+        BigDecimal loanOutstanding = employeeLoanRepository
+                .sumRemainingBalanceUsdByStatusAndActiveTrue(LoanStatus.ACTIVE);
+
+        long activeAdvanceCount = employeeAdvanceRepository.countByStatusAndActiveTrue(AdvanceStatus.ACTIVE);
+        BigDecimal advanceOutstanding = employeeAdvanceRepository
+                .sumRemainingBalanceUsdByStatusAndActiveTrue(AdvanceStatus.ACTIVE);
+
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate periodStart = today.with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate periodEnd = today.with(TemporalAdjusters.lastDayOfMonth());
+        BigDecimal currentPeriodExpense = expenseRepository
+                .sumUsdEquivalentAmountByStatusAndDateRange(ExpenseStatus.POSTED, periodStart, periodEnd);
+
+        return LoanAdvanceExpenseSummaryDTO.builder()
+                .activeLoanCount(activeLoanCount)
+                .loanOutstandingUsd(loanOutstanding)
+                .activeAdvanceCount(activeAdvanceCount)
+                .advanceOutstandingUsd(advanceOutstanding)
+                .currentPeriodExpenseUsd(currentPeriodExpense)
+                .currentPeriodLabel(monthLabel(today))
                 .build();
     }
 

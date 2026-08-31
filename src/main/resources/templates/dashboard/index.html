@@ -157,6 +157,64 @@
         </div>
     </div>
 
+    <!-- Loans / Advances / Expenses -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-cash-stack me-2"></i>Employee Loans</strong>
+                    <a class="btn btn-sm btn-outline-secondary" href="/loans">View Loans</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Active Loans</div>
+                            <div class="fs-5 fw-semibold" th:text="${s.loanAdvanceExpenseSummary.activeLoanCount}">0</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Total Outstanding</div>
+                            <div class="fs-5 fw-semibold">USD <span th:text="${#numbers.formatDecimal(s.loanAdvanceExpenseSummary.loanOutstandingUsd, 1, 2)}">0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-wallet-fill me-2"></i>Employee Advances</strong>
+                    <a class="btn btn-sm btn-outline-secondary" href="/advances">View Advances</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Active Advances</div>
+                            <div class="fs-5 fw-semibold" th:text="${s.loanAdvanceExpenseSummary.activeAdvanceCount}">0</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small text-uppercase">Total Outstanding</div>
+                            <div class="fs-5 fw-semibold">USD <span th:text="${#numbers.formatDecimal(s.loanAdvanceExpenseSummary.advanceOutstandingUsd, 1, 2)}">0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card hfms-card h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-receipt me-2"></i>Expenses</strong>
+                    <a class="btn btn-sm btn-outline-secondary" href="/expenses">View Expenses</a>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted small text-uppercase" th:text="${s.loanAdvanceExpenseSummary.currentPeriodLabel} + ' Expenses (Posted)'">This Month's Expenses (Posted)</div>
+                    <div class="fs-4 fw-semibold text-danger">USD <span th:text="${#numbers.formatDecimal(s.loanAdvanceExpenseSummary.currentPeriodExpenseUsd, 1, 2)}">0.00</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent transactions / statistics -->
     <div class="row g-3">
         <div class="col-lg-8">

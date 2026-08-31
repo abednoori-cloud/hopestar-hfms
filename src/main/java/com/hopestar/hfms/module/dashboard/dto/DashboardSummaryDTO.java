@@ -25,6 +25,7 @@ public class DashboardSummaryDTO {
     private FinancialSummaryDTO financialSummary;
     private OutstandingReceivablesDTO outstandingReceivables;
     private SalaryOverviewDTO salaryOverview;
+    private LoanAdvanceExpenseSummaryDTO loanAdvanceExpenseSummary;
     private List<RecentTransactionDTO> recentTransactions;
     private StudentEmployeeStatsDTO stats;
 }
