@@ -4,6 +4,7 @@ import com.hopestar.hfms.common.dto.PageResponse;
 import com.hopestar.hfms.common.enums.SupportedCurrency;
 import com.hopestar.hfms.common.exception.BusinessValidationException;
 import com.hopestar.hfms.common.exception.ResourceNotFoundException;
+import com.hopestar.hfms.common.service.LogoService;
 import com.hopestar.hfms.common.service.PdfGenerationService;
 import com.hopestar.hfms.module.auth.service.BranchService;
 import com.hopestar.hfms.module.finance.ledger.entity.TransactionStatus;
@@ -55,6 +56,7 @@ public class StudentPaymentController {
     private final LedgerService ledgerService;
     private final BranchService branchService;
     private final PdfGenerationService pdfGenerationService;
+    private final LogoService logoService;
     private final TemplateEngine pdfTemplateEngine;
 
     public StudentPaymentController(StudentPaymentService studentPaymentService,
@@ -65,6 +67,7 @@ public class StudentPaymentController {
                                      LedgerService ledgerService,
                                      BranchService branchService,
                                      PdfGenerationService pdfGenerationService,
+                                     LogoService logoService,
                                      @Qualifier("pdfTemplateEngine") TemplateEngine pdfTemplateEngine) {
         this.studentPaymentService = studentPaymentService;
         this.studentService = studentService;
@@ -74,6 +77,7 @@ public class StudentPaymentController {
         this.ledgerService = ledgerService;
         this.branchService = branchService;
         this.pdfGenerationService = pdfGenerationService;
+        this.logoService = logoService;
         this.pdfTemplateEngine = pdfTemplateEngine;
     }
 
@@ -163,6 +167,7 @@ public class StudentPaymentController {
         Context context = new Context();
         context.setVariable("payment", payment);
         context.setVariable("office", branchService.getHeadquarters());
+        context.setVariable("logoDataUri", logoService.getLogoDataUri());
         context.setVariable("voided", voided);
 
         String html = pdfTemplateEngine.process("payments/receipt-pdf", context);

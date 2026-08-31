@@ -3,6 +3,7 @@ package com.hopestar.hfms.module.finance.expense.controller;
 import com.hopestar.hfms.common.dto.PageResponse;
 import com.hopestar.hfms.common.exception.BusinessValidationException;
 import com.hopestar.hfms.common.exception.ResourceNotFoundException;
+import com.hopestar.hfms.common.service.LogoService;
 import com.hopestar.hfms.common.service.PdfGenerationService;
 import com.hopestar.hfms.module.auth.service.BranchService;
 import com.hopestar.hfms.module.finance.expense.dto.ExpenseCreateDTO;
@@ -51,6 +52,7 @@ public class ExpenseController {
     private final LedgerService ledgerService;
     private final BranchService branchService;
     private final PdfGenerationService pdfGenerationService;
+    private final LogoService logoService;
     private final TemplateEngine pdfTemplateEngine;
 
     public ExpenseController(ExpenseService expenseService,
@@ -59,6 +61,7 @@ public class ExpenseController {
                               LedgerService ledgerService,
                               BranchService branchService,
                               PdfGenerationService pdfGenerationService,
+                              LogoService logoService,
                               @Qualifier("pdfTemplateEngine") TemplateEngine pdfTemplateEngine) {
         this.expenseService = expenseService;
         this.expenseCategoryService = expenseCategoryService;
@@ -66,6 +69,7 @@ public class ExpenseController {
         this.ledgerService = ledgerService;
         this.branchService = branchService;
         this.pdfGenerationService = pdfGenerationService;
+        this.logoService = logoService;
         this.pdfTemplateEngine = pdfTemplateEngine;
     }
 
@@ -153,6 +157,7 @@ public class ExpenseController {
         Context context = new Context();
         context.setVariable("expense", expense);
         context.setVariable("office", branchService.getHeadquarters());
+        context.setVariable("logoDataUri", logoService.getLogoDataUri());
         context.setVariable("paymentMethodName", paymentMethodName);
         context.setVariable("voided", voided);
 
