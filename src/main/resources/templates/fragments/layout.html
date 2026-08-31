@@ -6,6 +6,7 @@
     <title th:fragment="head(pageTitle)" th:text="${pageTitle} + ' · HopeStar'">HopeStar</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css"/>
     <style>
         body { background-color: #f4f6f9; }
         .navbar-brand { font-weight: 600; letter-spacing: .02em; }
@@ -36,6 +37,7 @@
                 <li class="nav-item"><a class="nav-link" href="/advances">Advances</a></li>
                 <li class="nav-item"><a class="nav-link" href="/payments">Payments</a></li>
                 <li class="nav-item"><a class="nav-link" href="/expenses">Expenses</a></li>
+                <li class="nav-item"><a class="nav-link" href="/reports">Reports</a></li>
             </ul>
             <form th:action="@{/logout}" method="post" class="d-flex">
                 <button class="btn btn-outline-light btn-sm" type="submit">
@@ -73,6 +75,23 @@
 
 <div th:fragment="scripts">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+    <script>
+        // Every native <input type="date"> across the app gets Flatpickr
+        // applied automatically -- no per-page wiring needed. The original
+        // input keeps submitting "Y-m-d" (ISO, what every DTO/controller
+        // already expects) via altInput's hidden original field; altFormat
+        // is only the visible "d/m/Y" text the user sees and interacts
+        // with. See the date-formatting inspection notes for why dd/mm/yyyy
+        // was chosen over the browser/OS-locale-dependent native display.
+        document.addEventListener('DOMContentLoaded', function () {
+            flatpickr('input[type="date"]', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd/m/Y'
+            });
+        });
+    </script>
 </div>
 
 </body>

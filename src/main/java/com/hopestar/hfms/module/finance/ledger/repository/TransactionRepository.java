@@ -75,4 +75,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             + "ORDER BY t.transactionDate DESC, t.createdAt DESC")
     List<Transaction> findByStatusAndActiveTrueWithCurrencyOrderByDateDesc(
             @Param("status") TransactionStatus status, Pageable pageable);
+
+    /**
+     * Count and USD-equivalent total of every {@code POSTED} transaction
+     * within a date range, grouped by {@code transactionType} -- one
+     * query, not one per type. Backs the Reports module's Money In/Out
+     * report breakdown table, and doubles as the source for the Employee
+     * Report's payroll-cost figure (the {@code SALARY} row): {@code
+     * Salary.usdEquivalentSalary} is the basic-salary component only (see
+     * that entity's Javadoc), whereas a posted salary's ledger transaction
+     * carries the USD equivalent of the actual {@code netSalary} amount
+     * that was posted ({@code SalaryServiceImpl.post} posts {@code
+     * netSalary}, not {@code basicSalary}) -- so this is the correct,
+     * already-computed source for "payroll cost in USD", not a new
+     * calculation.
+     */
+    @Query("SELECT t.transactionType, COUNT(t), COALESCE(SUM(t.usdEquivalentAmount), 0) FROM Transaction t "
+            + "WHERE t.status = :status AND t.active = true AND t.transactionDate BETWEEN :start AND :end "
+            + "GROUP BY t.transactionType")
+    List<Object[]> countAndSumUsdEquivalentAmountGroupedByTypeAndStatusAndDateRange(
+            @Param("status") TransactionStatus status, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }

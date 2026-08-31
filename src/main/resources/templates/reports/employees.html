@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Employee Report')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Reports', url: '/reports'},
+    {label: 'Employee Report', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5" th:with="r=${report}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Employee Report</h4>
+        <a class="btn btn-outline-secondary" th:href="@{/reports/employees/pdf(from=${r.from}, to=${r.to})}" target="_blank">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+        </a>
+    </div>
+
+    <form class="card hfms-card mb-4" method="get" th:action="@{/reports/employees}">
+        <div class="card-body d-flex align-items-end gap-3 flex-wrap">
+            <div>
+                <label class="form-label">From</label>
+                <input type="date" class="form-control" name="from" th:value="${r.from}"/>
+            </div>
+            <div>
+                <label class="form-label">To</label>
+                <input type="date" class="form-control" name="to" th:value="${r.to}"/>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Apply</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Section 1: period figure -->
+    <div class="card hfms-card mb-4">
+        <div class="card-header bg-white py-3">
+            <strong>Payroll Cost This Period</strong>
+            <span class="text-muted small ms-2" th:text="'(' + ${#temporals.format(r.from, 'dd MMM yyyy')} + ' to ' + ${#temporals.format(r.to, 'dd MMM yyyy')} + ')'"></span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <div class="text-muted small text-uppercase">Total Payroll Cost (Posted)</div>
+                    <div class="fs-3 fw-semibold text-danger">USD <span th:text="${#numbers.formatDecimal(r.totalPayrollCostUsd, 1, 2)}">0.00</span></div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small text-uppercase">Salaries Paid</div>
+                    <div class="fs-3 fw-semibold" th:text="${r.payrollTransactionCount}">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: current-state figure, NOT date-filtered -->
+    <div class="card hfms-card">
+        <div class="card-header bg-white py-3">
+            <strong>Employees with Active Loan/Advance Balances</strong>
+            <span class="text-muted small ms-2">(not affected by the date filter above -- current balances only)</span>
+        </div>
+        <div class="card-body">
+            <div class="text-muted small text-uppercase mb-2">
+                Total Outstanding: USD <span th:text="${#numbers.formatDecimal(r.totalEmployeeOutstandingUsd, 1, 2)}">0.00</span>
+            </div>
+            <div th:if="${#lists.isEmpty(r.employeesWithBalances)}" class="text-muted small">
+                No employees currently have an active loan or advance balance.
+            </div>
+            <div class="table-responsive" th:unless="${#lists.isEmpty(r.employeesWithBalances)}">
+                <table class="table table-sm table-hfms mb-0">
+                    <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th class="text-end">Loan Outstanding (USD)</th>
+                        <th class="text-end">Advance Outstanding (USD)</th>
+                        <th class="text-end">Total (USD)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="e : ${r.employeesWithBalances}">
+                        <td>
+                            <a th:href="@{/employees/{id}(id=${e.employeeId})}" th:text="${e.employeeFullName}"></a>
+                            <span class="text-muted">(<span th:text="${e.employeeCode}"></span>)</span>
+                        </td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(e.loanOutstandingUsd, 1, 2)}"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(e.advanceOutstandingUsd, 1, 2)}"></td>
+                        <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(e.totalOutstandingUsd, 1, 2)}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

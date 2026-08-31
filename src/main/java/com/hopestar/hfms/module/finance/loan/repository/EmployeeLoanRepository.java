@@ -44,4 +44,20 @@ public interface EmployeeLoanRepository extends JpaRepository<EmployeeLoan, Long
     @Query("SELECT COALESCE(SUM(l.remainingBalance * l.exchangeRateToUsd), 0) FROM EmployeeLoan l "
             + "WHERE l.status = :status AND l.active = true")
     BigDecimal sumRemainingBalanceUsdByStatusAndActiveTrue(@Param("status") LoanStatus status);
+
+    /**
+     * Per-employee USD-equivalent remaining balance of every loan in the
+     * given status, one row per employee -- backs the Reports module's
+     * Employee Report. Each row is {@code Object[]{Long employeeId, String
+     * employeeCode, String employeeFullName, BigDecimal
+     * remainingBalanceUsd}}; selecting the employee's id/code/name as
+     * scalar columns (rather than the {@code Employee} entity itself)
+     * means the join happens once, in this query, instead of triggering a
+     * lazy-load per row.
+     */
+    @Query("SELECT l.employee.id, l.employee.employeeCode, l.employee.fullName, "
+            + "COALESCE(SUM(l.remainingBalance * l.exchangeRateToUsd), 0) FROM EmployeeLoan l "
+            + "WHERE l.status = :status AND l.active = true "
+            + "GROUP BY l.employee.id, l.employee.employeeCode, l.employee.fullName")
+    List<Object[]> sumRemainingBalanceUsdGroupedByEmployeeAndStatus(@Param("status") LoanStatus status);
 }

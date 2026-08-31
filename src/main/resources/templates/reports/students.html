@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Student Report')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Reports', url: '/reports'},
+    {label: 'Student Report', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5" th:with="r=${report}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Student Report</h4>
+        <a class="btn btn-outline-secondary"
+           th:href="@{/reports/students/pdf(from=${r.from}, to=${r.to}, programId=${r.programId})}" target="_blank">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+        </a>
+    </div>
+
+    <form class="card hfms-card mb-4" method="get" th:action="@{/reports/students}">
+        <div class="card-body d-flex align-items-end gap-3 flex-wrap">
+            <div>
+                <label class="form-label">From</label>
+                <input type="date" class="form-control" name="from" th:value="${r.from}"/>
+            </div>
+            <div>
+                <label class="form-label">To</label>
+                <input type="date" class="form-control" name="to" th:value="${r.to}"/>
+            </div>
+            <div>
+                <label class="form-label">Program</label>
+                <select class="form-select" name="programId">
+                    <option value="">All Programs</option>
+                    <option th:each="p : ${programs}" th:value="${p.id}" th:text="${p.name}"
+                            th:selected="${p.id == selectedProgramId}"></option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-funnel me-1"></i>Apply</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Section 1: period figure -->
+    <div class="card hfms-card mb-4">
+        <div class="card-header bg-white py-3">
+            <strong>Revenue This Period</strong>
+            <span class="text-muted small ms-2" th:text="'(' + ${#temporals.format(r.from, 'dd MMM yyyy')} + ' to ' + ${#temporals.format(r.to, 'dd MMM yyyy')} + ', ' + ${r.programName} + ')'"></span>
+        </div>
+        <div class="card-body">
+            <div class="text-muted small text-uppercase">Total Revenue Collected (Posted Payments)</div>
+            <div class="fs-3 fw-semibold text-success">USD <span th:text="${#numbers.formatDecimal(r.totalRevenueUsd, 1, 2)}">0.00</span></div>
+        </div>
+    </div>
+
+    <!-- Section 2: current-state figure, NOT date-filtered -->
+    <div class="card hfms-card">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <strong>Currently Outstanding, All Time</strong>
+                <span class="text-muted small ms-2">(not affected by the date filter above -- current balances only)</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-6">
+                    <div class="text-muted small text-uppercase">Total Outstanding</div>
+                    <div class="fs-5 fw-semibold text-danger">USD <span th:text="${#numbers.formatDecimal(r.totalOutstandingUsd, 1, 2)}">0.00</span></div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small text-uppercase">Students Owing</div>
+                    <div class="fs-5 fw-semibold" th:text="${r.studentsOwingCount}">0</div>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(r.outstandingStudents)}" class="text-muted small">
+                No active contracts currently have an outstanding balance.
+            </div>
+            <div class="table-responsive" th:unless="${#lists.isEmpty(r.outstandingStudents)}">
+                <table class="table table-sm table-hfms mb-0">
+                    <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Program</th>
+                        <th class="text-end">Contract (USD)</th>
+                        <th class="text-end">Remaining (USD)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${r.outstandingStudents}">
+                        <td>
+                            <a th:href="@{/students/{id}(id=${s.studentId})}" th:text="${s.studentFullName}"></a>
+                            <span class="text-muted">(<span th:text="${s.studentCode}"></span>)</span>
+                        </td>
+                        <td th:text="${s.programName}"></td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(s.contractUsdEquivalentAmount, 1, 2)}"></td>
+                        <td class="text-end fw-semibold text-danger" th:text="${#numbers.formatDecimal(s.remainingBalanceUsd, 1, 2)}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

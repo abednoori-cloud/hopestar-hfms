@@ -145,7 +145,7 @@ public class DashboardServiceImpl implements DashboardService {
                 ContractStatus.ACTIVE, PaymentStatus.POSTED);
 
         List<Object[]> rows = studentContractRepository.findTopOutstandingContractsWithRemainingBalance(
-                ContractStatus.ACTIVE, PaymentStatus.POSTED, PageRequest.of(0, OUTSTANDING_CONTRACT_DISPLAY_LIMIT));
+                ContractStatus.ACTIVE, PaymentStatus.POSTED, null, PageRequest.of(0, OUTSTANDING_CONTRACT_DISPLAY_LIMIT));
 
         List<OutstandingContractDTO> topOutstanding = rows.stream()
                 .map(row -> {

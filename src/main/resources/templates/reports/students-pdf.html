@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Student Report</title>
+    <style type="text/css">
+        @page { size: A4; margin: 2.2cm 1.8cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 11pt; color: #222222; }
+        h1 { font-size: 16pt; margin: 0 0 2px 0; }
+        h2 { font-size: 12pt; margin: 18px 0 6px 0; border-bottom: 1px solid #333333; padding-bottom: 4px; }
+        .muted { color: #666666; }
+        .office-header { width: 100%; border-bottom: 2px solid #333333; padding-bottom: 10px; margin-bottom: 16px; }
+        .office-header td { vertical-align: top; }
+        .office-logo-cell { width: 110px; padding-right: 12px; }
+        .office-logo { width: 100px; height: 100px; }
+        .doc-title { text-align: right; }
+        .doc-title .badge { font-size: 13pt; font-weight: bold; }
+        .section-note { font-size: 9pt; color: #777777; margin-bottom: 6px; }
+        table.summary { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        table.summary td { padding: 6px 4px; border-bottom: 1px solid #dddddd; }
+        table.summary td.label { width: 60%; color: #555555; }
+        table.summary td.value { text-align: right; font-weight: bold; }
+        table.breakdown { width: 100%; border-collapse: collapse; margin-top: 6px; }
+        table.breakdown th { text-align: left; font-size: 9pt; text-transform: uppercase; color: #777777; border-bottom: 2px solid #333333; padding: 4px; }
+        table.breakdown th.num, table.breakdown td.num { text-align: right; }
+        table.breakdown td { padding: 5px 4px; border-bottom: 1px solid #dddddd; }
+        .footer { margin-top: 24px; font-size: 9pt; color: #777777; border-top: 1px solid #dddddd; padding-top: 8px; }
+    </style>
+</head>
+<body>
+
+    <table class="office-header">
+        <tr>
+            <td class="office-logo-cell">
+                <img th:src="${logoDataUri}" alt="HopeStar" class="office-logo"/>
+            </td>
+            <td>
+                <h1 th:text="${office.name}">HopeStar Education Consultancy</h1>
+                <div class="muted" th:text="${office.address}">Office Address</div>
+                <div class="muted">
+                    <span th:if="${office.phone}" th:text="'Tel: ' + ${office.phone}">Tel: 000</span>
+                    <span th:if="${office.email}" th:text="' | ' + ${office.email}"> | email</span>
+                </div>
+            </td>
+            <td class="doc-title">
+                <div class="badge">STUDENT REPORT</div>
+                <div th:text="${report.programName}">All Programs</div>
+            </td>
+        </tr>
+    </table>
+
+    <h2>Revenue This Period</h2>
+    <div class="section-note" th:text="'Period: ' + ${#temporals.format(report.from, 'dd MMM yyyy')} + ' to ' + ${#temporals.format(report.to, 'dd MMM yyyy')}">Period: 01 Jan 2026 to 31 Jan 2026</div>
+    <table class="summary">
+        <tr>
+            <td class="label">Total Revenue Collected (Posted Payments)</td>
+            <td class="value" th:text="'USD ' + ${#numbers.formatDecimal(report.totalRevenueUsd, 1, 2)}">USD 0.00</td>
+        </tr>
+    </table>
+
+    <h2>Currently Outstanding, All Time</h2>
+    <div class="section-note">Not affected by the period above -- current balances only, as of the date this report was generated.</div>
+    <table class="summary">
+        <tr>
+            <td class="label">Total Outstanding</td>
+            <td class="value" th:text="'USD ' + ${#numbers.formatDecimal(report.totalOutstandingUsd, 1, 2)}">USD 0.00</td>
+        </tr>
+        <tr>
+            <td class="label">Students Owing</td>
+            <td class="value" th:text="${report.studentsOwingCount}">0</td>
+        </tr>
+    </table>
+
+    <table class="breakdown">
+        <thead>
+        <tr>
+            <th>Student</th>
+            <th>Program</th>
+            <th class="num">Contract (USD)</th>
+            <th class="num">Remaining (USD)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="s : ${report.outstandingStudents}">
+            <td th:text="${s.studentFullName} + ' (' + ${s.studentCode} + ')'">Student Name (STU-0001)</td>
+            <td th:text="${s.programName}">Program</td>
+            <td class="num" th:text="${#numbers.formatDecimal(s.contractUsdEquivalentAmount, 1, 2)}">0.00</td>
+            <td class="num" th:text="${#numbers.formatDecimal(s.remainingBalanceUsd, 1, 2)}">0.00</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>Revenue and outstanding-balance figures above are computed independently and cover different scopes -- see each section's note.</div>
+    </div>
+
+</body>
+</html>

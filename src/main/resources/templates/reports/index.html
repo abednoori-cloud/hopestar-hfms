@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Reports')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Reports', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+    <h4 class="mb-4">Reports</h4>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <h5><i class="bi bi-cash-coin me-2"></i>Money In/Out</h5>
+                    <p class="text-muted">Ledger income vs. expense for a date range, broken down by transaction type.</p>
+                    <a class="btn btn-primary" href="/reports/cashflow">View Report</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <h5><i class="bi bi-mortarboard me-2"></i>Student Report</h5>
+                    <p class="text-muted">Revenue collected in a period, and every student currently owing a balance.</p>
+                    <a class="btn btn-primary" href="/reports/students">View Report</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card hfms-card h-100">
+                <div class="card-body">
+                    <h5><i class="bi bi-people me-2"></i>Employee Report</h5>
+                    <p class="text-muted">Payroll cost for a period, and every employee with an active loan/advance balance.</p>
+                    <a class="btn btn-primary" href="/reports/employees">View Report</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

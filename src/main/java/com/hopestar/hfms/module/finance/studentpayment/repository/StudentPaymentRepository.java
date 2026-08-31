@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,4 +65,21 @@ public interface StudentPaymentRepository extends JpaRepository<StudentPayment, 
             + "AND p.contract.status = :contractStatus AND p.contract.active = true")
     BigDecimal sumUsdEquivalentAmountByStatusAndContractStatus(@Param("status") PaymentStatus status,
                                                                 @Param("contractStatus") ContractStatus contractStatus);
+
+    /**
+     * Sums the USD-equivalent amount of every payment in the given status
+     * within a date range, optionally scoped to one program -- backs the
+     * Reports module's Student Report "revenue this period" figure.
+     * Mirrors {@code ExpenseRepository.sumUsdEquivalentAmountByStatusAndDateRange}
+     * exactly, plus the optional-filter shape already used by {@code
+     * StudentContractRepository.findTopOutstandingContractsWithRemainingBalance}
+     * ({@code :programId IS NULL} means "every program").
+     */
+    @Query("SELECT COALESCE(SUM(p.usdEquivalentAmount), 0) FROM StudentPayment p "
+            + "WHERE p.status = :status AND p.active = true AND p.paymentDate BETWEEN :start AND :end "
+            + "AND (:programId IS NULL OR p.contract.program.id = :programId)")
+    BigDecimal sumUsdEquivalentAmountByStatusAndDateRangeAndProgram(@Param("status") PaymentStatus status,
+                                                                     @Param("start") LocalDate start,
+                                                                     @Param("end") LocalDate end,
+                                                                     @Param("programId") Long programId);
 }

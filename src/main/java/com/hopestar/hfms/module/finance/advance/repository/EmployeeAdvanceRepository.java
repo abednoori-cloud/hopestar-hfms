@@ -41,4 +41,16 @@ public interface EmployeeAdvanceRepository extends JpaRepository<EmployeeAdvance
     @Query("SELECT COALESCE(SUM(a.remainingBalance * a.exchangeRateToUsd), 0) FROM EmployeeAdvance a "
             + "WHERE a.status = :status AND a.active = true")
     BigDecimal sumRemainingBalanceUsdByStatusAndActiveTrue(@Param("status") AdvanceStatus status);
+
+    /**
+     * Per-employee USD-equivalent remaining balance of every advance in
+     * the given status, one row per employee -- backs the Reports module's
+     * Employee Report. Mirrors {@code EmployeeLoanRepository
+     * .sumRemainingBalanceUsdGroupedByEmployeeAndStatus} exactly.
+     */
+    @Query("SELECT a.employee.id, a.employee.employeeCode, a.employee.fullName, "
+            + "COALESCE(SUM(a.remainingBalance * a.exchangeRateToUsd), 0) FROM EmployeeAdvance a "
+            + "WHERE a.status = :status AND a.active = true "
+            + "GROUP BY a.employee.id, a.employee.employeeCode, a.employee.fullName")
+    List<Object[]> sumRemainingBalanceUsdGroupedByEmployeeAndStatus(@Param("status") AdvanceStatus status);
 }

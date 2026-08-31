@@ -86,7 +86,7 @@ class DashboardServiceImplTest {
                 .thenReturn(BigDecimal.ZERO);
         lenient().when(studentContractRepository.countDistinctStudentsWithOutstandingBalance(any(), any()))
                 .thenReturn(0L);
-        lenient().when(studentContractRepository.findTopOutstandingContractsWithRemainingBalance(any(), any(), any()))
+        lenient().when(studentContractRepository.findTopOutstandingContractsWithRemainingBalance(any(), any(), any(), any()))
                 .thenReturn(List.of());
 
         lenient().when(studentPaymentRepository.sumUsdEquivalentAmountByStatusAndContractStatus(any(), any()))
@@ -199,7 +199,7 @@ class DashboardServiceImplTest {
         // itself filters to a positive remaining balance, so only owing
         // contracts are ever returned as rows.
         when(studentContractRepository.findTopOutstandingContractsWithRemainingBalance(
-                any(ContractStatus.class), any(PaymentStatus.class), any(Pageable.class)))
+                any(ContractStatus.class), any(PaymentStatus.class), any(), any(Pageable.class)))
                 .thenReturn(List.<Object[]>of(new Object[] {owingContract, new BigDecimal("600.00")}));
 
         DashboardSummaryDTO summary = dashboardService.getDashboardSummary();
