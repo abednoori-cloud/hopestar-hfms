@@ -77,12 +77,10 @@ class DashboardServiceImplTest {
                 .thenReturn(BigDecimal.ZERO);
         lenient().when(studentContractRepository.countDistinctStudentsWithOutstandingBalance(any(), any()))
                 .thenReturn(0L);
-        lenient().when(studentContractRepository.findByStatusAndActiveTrueWithStudentOrderByContractDateDesc(any(), any()))
+        lenient().when(studentContractRepository.findTopOutstandingContractsWithRemainingBalance(any(), any(), any()))
                 .thenReturn(List.of());
 
         lenient().when(studentPaymentRepository.sumUsdEquivalentAmountByStatusAndContractStatus(any(), any()))
-                .thenReturn(BigDecimal.ZERO);
-        lenient().when(studentPaymentRepository.sumUsdEquivalentAmountByContractIdAndStatus(any(), any()))
                 .thenReturn(BigDecimal.ZERO);
 
         lenient().when(salaryRepository.countByPaymentStatusAndActiveTrue(any())).thenReturn(0L);
@@ -177,18 +175,14 @@ class DashboardServiceImplTest {
                 .thenReturn(2L);
 
         Student owingStudent = student(1L, "STU-0001", "Alice Owes");
-        Student paidStudent = student(2L, "STU-0002", "Bob Paid");
         StudentContract owingContract = contract(10L, owingStudent, new BigDecimal("1000.00"));
-        StudentContract paidContract = contract(11L, paidStudent, new BigDecimal("800.00"));
 
-        when(studentContractRepository.findByStatusAndActiveTrueWithStudentOrderByContractDateDesc(
-                any(ContractStatus.class), any(Pageable.class)))
-                .thenReturn(List.of(owingContract, paidContract));
-
-        when(studentPaymentRepository.sumUsdEquivalentAmountByContractIdAndStatus(10L, PaymentStatus.POSTED))
-                .thenReturn(new BigDecimal("400.00")); // owes 600
-        when(studentPaymentRepository.sumUsdEquivalentAmountByContractIdAndStatus(11L, PaymentStatus.POSTED))
-                .thenReturn(new BigDecimal("800.00")); // fully paid, owes 0
+        // The fully-paid contract never appears here: the repository query
+        // itself filters to a positive remaining balance, so only owing
+        // contracts are ever returned as rows.
+        when(studentContractRepository.findTopOutstandingContractsWithRemainingBalance(
+                any(ContractStatus.class), any(PaymentStatus.class), any(Pageable.class)))
+                .thenReturn(List.<Object[]>of(new Object[] {owingContract, new BigDecimal("600.00")}));
 
         DashboardSummaryDTO summary = dashboardService.getDashboardSummary();
 

@@ -34,7 +34,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.TextStyle;
 import java.time.temporal.TemporalAdjusters;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -44,10 +43,7 @@ import java.util.Map;
  * Implements {@link DashboardService}. Reads directly from existing
  * repositories (permitted for a read-only aggregation layer per the
  * approved architecture -- see the interface Javadoc) rather than routing
- * every figure through each module's full service layer; the one place
- * this implementation deliberately reuses a service-level formula instead
- * of a repository call directly is documented at {@link
- * #buildOutstandingReceivables()}.
+ * every figure through each module's full service layer.
  */
 @Service
 @RequiredArgsConstructor
@@ -55,7 +51,6 @@ import java.util.Map;
 public class DashboardServiceImpl implements DashboardService {
 
     /** Bounded candidate pool sizes -- the Dashboard never loads a whole table. */
-    private static final int OUTSTANDING_CONTRACT_CANDIDATE_POOL = 20;
     private static final int OUTSTANDING_CONTRACT_DISPLAY_LIMIT = 5;
     private static final int PENDING_SALARY_DISPLAY_LIMIT = 5;
     private static final int RECENT_TRANSACTION_LIMIT = 8;
@@ -122,12 +117,11 @@ public class DashboardServiceImpl implements DashboardService {
      * model defines whether a leftover balance on a cancelled contract is
      * still a receivable -- see the Module 2 final report.
      * <p>
-     * The top-N list reuses {@code
-     * StudentPaymentRepository.sumUsdEquivalentAmountByContractIdAndStatus}
-     * -- the exact same repository call {@code
-     * StudentContractServiceImpl#getRemainingBalanceUsd} is built on --
-     * against a small, bounded candidate pool, rather than duplicating the
-     * remaining-balance formula.
+     * The top-N list is computed, filtered, and sorted in a single query
+     * ({@code StudentContractRepository
+     * .findTopOutstandingContractsWithRemainingBalance}) rather than
+     * loading a candidate pool and issuing one remaining-balance query per
+     * contract (a former N+1, since fixed).
      */
     private OutstandingReceivablesDTO buildOutstandingReceivables() {
         BigDecimal totalContractValue = studentContractRepository
@@ -139,38 +133,28 @@ public class DashboardServiceImpl implements DashboardService {
         long studentsWithOutstanding = studentContractRepository.countDistinctStudentsWithOutstandingBalance(
                 ContractStatus.ACTIVE, PaymentStatus.POSTED);
 
-        List<StudentContract> candidates = studentContractRepository
-                .findByStatusAndActiveTrueWithStudentOrderByContractDateDesc(
-                        ContractStatus.ACTIVE, PageRequest.of(0, OUTSTANDING_CONTRACT_CANDIDATE_POOL));
+        List<Object[]> rows = studentContractRepository.findTopOutstandingContractsWithRemainingBalance(
+                ContractStatus.ACTIVE, PaymentStatus.POSTED, PageRequest.of(0, OUTSTANDING_CONTRACT_DISPLAY_LIMIT));
 
-        List<OutstandingContractDTO> topOutstanding = candidates.stream()
-                .map(this::toOutstandingContractDTOIfOwing)
-                .filter(dto -> dto != null)
-                .sorted(Comparator.comparing(OutstandingContractDTO::getRemainingBalanceUsd).reversed())
-                .limit(OUTSTANDING_CONTRACT_DISPLAY_LIMIT)
+        List<OutstandingContractDTO> topOutstanding = rows.stream()
+                .map(row -> {
+                    StudentContract contract = (StudentContract) row[0];
+                    BigDecimal remaining = (BigDecimal) row[1];
+                    return OutstandingContractDTO.builder()
+                            .contractId(contract.getId())
+                            .studentId(contract.getStudent().getId())
+                            .studentCode(contract.getStudent().getStudentCode())
+                            .studentFullName(contract.getStudent().getFullName())
+                            .contractUsdEquivalentAmount(contract.getUsdEquivalentAmount())
+                            .remainingBalanceUsd(remaining)
+                            .build();
+                })
                 .toList();
 
         return OutstandingReceivablesDTO.builder()
                 .totalOutstandingUsd(totalOutstanding)
                 .studentsWithOutstandingBalanceCount(studentsWithOutstanding)
                 .topOutstandingContracts(topOutstanding)
-                .build();
-    }
-
-    private OutstandingContractDTO toOutstandingContractDTOIfOwing(StudentContract contract) {
-        BigDecimal posted = studentPaymentRepository
-                .sumUsdEquivalentAmountByContractIdAndStatus(contract.getId(), PaymentStatus.POSTED);
-        BigDecimal remaining = MoneyUtil.subtract(contract.getUsdEquivalentAmount(), posted);
-        if (!MoneyUtil.isPositive(remaining)) {
-            return null;
-        }
-        return OutstandingContractDTO.builder()
-                .contractId(contract.getId())
-                .studentId(contract.getStudent().getId())
-                .studentCode(contract.getStudent().getStudentCode())
-                .studentFullName(contract.getStudent().getFullName())
-                .contractUsdEquivalentAmount(contract.getUsdEquivalentAmount())
-                .remainingBalanceUsd(remaining)
                 .build();
     }
 
