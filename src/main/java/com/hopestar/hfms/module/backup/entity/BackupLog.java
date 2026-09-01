@@ -22,9 +22,11 @@ import java.time.LocalDateTime;
  * Append-only record of a single backup attempt (manual or automatic).
  * Deliberately does <b>not</b> extend {@code BaseEntity} -- mirrors {@code
  * com.hopestar.hfms.audit.entity.AuditLog}'s precedent exactly: a row is
- * either kept as history or genuinely removed (manual delete via {@code
- * BackupService.deleteBackup}, or automatic retention cleanup), never
- * soft-deleted or edited in place.
+ * either kept as history indefinitely or genuinely removed, only ever via
+ * the user-triggered {@code BackupService.deleteBackup} (there is no
+ * automatic retention/cleanup -- by explicit product decision the system
+ * never deletes a backup on its own), never soft-deleted or edited in
+ * place.
  */
 @Getter
 @Setter

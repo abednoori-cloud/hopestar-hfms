@@ -78,7 +78,7 @@ dev, staging, and production without code changes.
 | `HFMS_BACKUP_PATH` | database backup dump storage root | `./data/backups` |
 
 See `application.yml` for the full list of `hfms.*` application-specific
-settings (student/employee code prefixes, backup schedule/retention,
+settings (student/employee code prefixes, backup schedule,
 account-lockout threshold).
 
 ## 5. Running Locally (without Docker)

@@ -80,8 +80,9 @@ hfms:
   backup:
     auto-backup-enabled: true
     auto-backup-cron: "0 0 2 * * *"   # daily at 02:00
-    retention-daily: 30
-    retention-monthly: 12
+    # No automatic retention/cleanup setting: by explicit product decision
+    # the system never deletes a backup on its own -- only the manual
+    # "Delete" action (BackupService.deleteBackup) ever removes one.
     # Neither tool is guaranteed to be on PATH; default assumes it is
     # (typical for a Linux prod host with the mysql-client package
     # installed) and profiles override with an absolute path where

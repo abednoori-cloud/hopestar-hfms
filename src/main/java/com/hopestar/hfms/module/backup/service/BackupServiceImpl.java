@@ -25,12 +25,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -153,10 +150,6 @@ public class BackupServiceImpl implements BackupService {
             throw new BusinessValidationException("Backup failed: " + errorMessage);
         }
 
-        if (type == BackupType.AUTOMATIC) {
-            applyRetention();
-        }
-
         return toResponseDTO(saved);
     }
 
@@ -229,44 +222,6 @@ public class BackupServiceImpl implements BackupService {
                 .normalize();
         deleteQuietly(file);
         backupLogRepository.delete(backupLog);
-    }
-
-    // ---------------------------------------------------------------
-    // retention
-    // ---------------------------------------------------------------
-
-    /**
-     * Straightforward retention: any SUCCESS backup within {@code
-     * retention-daily} days is always kept; beyond that, the earliest
-     * SUCCESS backup of each calendar month is kept as long as that month
-     * falls within {@code retention-monthly} months, everything else is
-     * removed. Only ever called after a successful AUTOMATIC backup.
-     */
-    private void applyRetention() {
-        List<BackupLog> successes = backupLogRepository.findByStatusOrderByStartedAtAsc(BackupStatus.SUCCESS);
-        LocalDateTime dailyCutoff = LocalDateTime.now().minusDays(backupProperties.getRetentionDaily());
-        LocalDateTime monthlyCutoff = LocalDateTime.now().minusMonths(backupProperties.getRetentionMonthly());
-        Set<YearMonth> monthlyKept = new HashSet<>();
-
-        for (BackupLog backupLog : successes) {
-            if (backupLog.getStartedAt().isAfter(dailyCutoff)) {
-                continue;
-            }
-            YearMonth month = YearMonth.from(backupLog.getStartedAt());
-            boolean isFirstSeenInMonth = monthlyKept.add(month);
-            boolean withinMonthlyWindow = backupLog.getStartedAt().isAfter(monthlyCutoff);
-            if (isFirstSeenInMonth && withinMonthlyWindow) {
-                continue;
-            }
-
-            Path file = Path.of(fileStorageProperties.getBackupPath())
-                    .resolve(backupLog.getFileName())
-                    .toAbsolutePath()
-                    .normalize();
-            deleteQuietly(file);
-            backupLogRepository.delete(backupLog);
-            log.info("Retention removed backup '{}' (started {})", backupLog.getFileName(), backupLog.getStartedAt());
-        }
     }
 
     // ---------------------------------------------------------------
