@@ -49,6 +49,8 @@ logging:
   file:
     name: /var/log/hfms/hfms.log
 
-hfms:
-  backup:
-    auto-backup-enabled: true
+# No hfms.backup.* overrides here: auto-backup-enabled/cron now live in
+# backup_schedule_settings (admin-editable at runtime), not application.yml
+# -- see BackupProperties/BackupSchedule. mysqldump-path/mysql-restore-path
+# fall through to application.yml's env-var-driven defaults (bare
+# "mysqldump"/"mysql", assumed on PATH via the mysql-client package).

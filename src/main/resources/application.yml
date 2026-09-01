@@ -78,11 +78,15 @@ hfms:
     code-prefix: EMP
 
   backup:
-    auto-backup-enabled: true
-    auto-backup-cron: "0 0 2 * * *"   # daily at 02:00
-    # No automatic retention/cleanup setting: by explicit product decision
-    # the system never deletes a backup on its own -- only the manual
-    # "Delete" action (BackupService.deleteBackup) ever removes one.
+    # No automatic-backup-enabled/cron keys here: the schedule is
+    # admin-editable at runtime via the Settings UI, so it lives in the
+    # backup_schedule_settings table (seeded by
+    # V16__backup_schedule_settings.sql), not a static config file --
+    # see BackupProperties' and BackupScheduler's Javadoc.
+    #
+    # No automatic retention/cleanup setting either: by explicit product
+    # decision the system never deletes a backup on its own -- only the
+    # manual "Delete" action (BackupService.deleteBackup) ever removes one.
     # Neither tool is guaranteed to be on PATH; default assumes it is
     # (typical for a Linux prod host with the mysql-client package
     # installed) and profiles override with an absolute path where

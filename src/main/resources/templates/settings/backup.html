@@ -19,9 +19,37 @@
     </div>
 
     <p class="text-muted">
-        Backs up the database only (not uploaded student documents). A nightly automatic backup also runs per the
-        configured schedule. Backup files are stored locally in the server's configured backups folder.
+        Backs up the database only (not uploaded student documents). Backup files are stored locally in the
+        server's configured backups folder.
     </p>
+
+    <div class="card hfms-card mb-4">
+        <div class="card-header bg-white"><strong><i class="bi bi-clock-history me-2"></i>Automatic Backup Schedule</strong></div>
+        <div class="card-body">
+            <p class="mb-3">
+                <span th:if="${schedule.enabled}" class="badge bg-success me-1">ON</span>
+                <span th:unless="${schedule.enabled}" class="badge bg-secondary me-1">OFF</span>
+                <span th:if="${schedule.enabled}"
+                      th:text="'Automatic backups are ON, running nightly at ' + ${#temporals.format(schedule.time, 'HH:mm')} + '.'"></span>
+                <span th:unless="${schedule.enabled}">Automatic backups are OFF.</span>
+            </p>
+            <form method="post" th:action="@{/settings/backup/schedule}" th:object="${scheduleDTO}" class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="scheduleEnabled" th:field="*{enabled}"/>
+                        <label class="form-check-label" for="scheduleEnabled">Enabled</label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <label class="form-label mb-0">Time</label>
+                    <input type="time" class="form-control" th:field="*{time}" required/>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-check-lg me-1"></i>Save Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <div class="card hfms-card">
         <div class="card-body p-0">

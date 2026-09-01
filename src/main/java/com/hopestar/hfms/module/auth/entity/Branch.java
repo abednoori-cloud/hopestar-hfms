@@ -46,6 +46,18 @@ public class Branch extends BaseEntity {
     @Column(name = "email", length = 100)
     private String email;
 
+    @Column(name = "website", length = 255)
+    private String website;
+
+    /**
+     * Path to an uploaded logo image, managed by {@code FileStorageService}
+     * the same way {@code StudentDocument.filePath} is. {@code null} means
+     * no logo has been uploaded yet -- {@code LogoServiceImpl} falls back
+     * to the bundled classpath default in that case.
+     */
+    @Column(name = "logo_path", length = 500)
+    private String logoPath;
+
     @Column(name = "is_headquarters", nullable = false)
     @Builder.Default
     private boolean headquarters = false;

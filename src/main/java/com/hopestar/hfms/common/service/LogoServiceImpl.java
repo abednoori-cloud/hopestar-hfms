@@ -1,57 +1,93 @@
 package com.hopestar.hfms.common.service;
 
 import com.hopestar.hfms.common.exception.PdfGenerationException;
+import com.hopestar.hfms.module.auth.repository.BranchRepository;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
+import java.util.Optional;
 
 /**
- * Implements {@link LogoService} by reading {@code
- * static/images/hopestar-logo.jpeg} off the classpath and embedding it as
- * a base64 {@code data:} URI, computed once at startup and cached for the
- * life of the application.
+ * Implements {@link LogoService}. Serves the Organization Settings page's
+ * uploaded logo (the headquarters {@code Branch.logoPath}, managed by
+ * {@link FileStorageService}) when one has been uploaded, falling back to
+ * the bundled {@code static/images/hopestar-logo.jpeg} classpath default
+ * otherwise -- so PDF generation never breaks even before an admin has
+ * uploaded a custom logo.
  * <p>
- * This is deliberately <b>not</b> a normal {@code <img src="/images/...">}
- * URL, even though that path is what the browser-rendered navbar uses (see
- * {@code fragments/layout.html}): openhtmltopdf renders the Receipt/
- * Voucher HTML string in isolation, with no live HTTP request/response
- * cycle behind it -- there is no running "browser" to resolve a
- * server-relative URL against, and no {@code baseUri} is passed to {@code
- * PdfRendererBuilder.withHtmlContent} (see {@code PdfGenerationServiceImpl})
- * for it to resolve a relative or {@code classpath:} path against either.
- * A self-contained base64 data URI sidesteps all of that: the image bytes
- * travel inside the HTML string itself, so openhtmltopdf never needs to
- * fetch anything from the filesystem, classpath, or network to render it --
- * which also means it works identically whether the app is running from
- * exploded classes (IDE/dev) or a packaged jar (prod), where a
- * classpath resource is not a real file on disk at all.
+ * Only the classpath fallback is cached (once, at startup, since it never
+ * changes at runtime); the uploaded logo is re-read from disk on every
+ * call. That's deliberate: unlike the fallback, the uploaded logo can
+ * change at any time via the Settings page, and a PDF generated right
+ * after a new upload must show the new logo, not a startup-time snapshot.
+ * A single small image read per PDF generation is not a meaningful cost
+ * for this application's traffic.
+ * <p>
+ * Injects {@link BranchRepository} directly (a {@code common}-layer
+ * service depending on a {@code module.auth} repository) -- the same
+ * precedent {@link SequenceGeneratorServiceImpl} already established for
+ * this exact codebase.
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class LogoServiceImpl implements LogoService {
 
     private static final String LOGO_CLASSPATH_LOCATION = "static/images/hopestar-logo.jpeg";
-    private static final String MIME_TYPE = "image/jpeg";
+    private static final String DEFAULT_MIME_TYPE = "image/jpeg";
 
-    private String logoDataUri;
+    private final BranchRepository branchRepository;
+
+    private String defaultLogoDataUri;
 
     @PostConstruct
-    void loadLogo() {
+    void loadDefaultLogo() {
         ClassPathResource resource = new ClassPathResource(LOGO_CLASSPATH_LOCATION);
         try {
             byte[] bytes = StreamUtils.copyToByteArray(resource.getInputStream());
             String base64 = Base64.getEncoder().encodeToString(bytes);
-            this.logoDataUri = "data:" + MIME_TYPE + ";base64," + base64;
+            this.defaultLogoDataUri = "data:" + DEFAULT_MIME_TYPE + ";base64," + base64;
         } catch (IOException ex) {
-            throw new PdfGenerationException("Could not load the HopeStar logo from " + LOGO_CLASSPATH_LOCATION, ex);
+            throw new PdfGenerationException("Could not load the default logo from " + LOGO_CLASSPATH_LOCATION, ex);
         }
     }
 
     @Override
     public String getLogoDataUri() {
-        return logoDataUri;
+        return branchRepository.findFirstByHeadquartersTrueAndActiveTrue()
+                .map(branch -> branch.getLogoPath())
+                .flatMap(this::readUploadedLogo)
+                .orElse(defaultLogoDataUri);
+    }
+
+    private Optional<String> readUploadedLogo(String logoPath) {
+        if (logoPath == null) {
+            return Optional.empty();
+        }
+        Path path = Path.of(logoPath);
+        if (!Files.exists(path)) {
+            log.warn("Branch.logoPath '{}' no longer exists on disk; falling back to the default logo.", logoPath);
+            return Optional.empty();
+        }
+        try {
+            byte[] bytes = Files.readAllBytes(path);
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                contentType = DEFAULT_MIME_TYPE;
+            }
+            String base64 = Base64.getEncoder().encodeToString(bytes);
+            return Optional.of("data:" + contentType + ";base64," + base64);
+        } catch (IOException ex) {
+            log.warn("Could not read uploaded logo '{}'; falling back to the default logo.", logoPath, ex);
+            return Optional.empty();
+        }
     }
 }

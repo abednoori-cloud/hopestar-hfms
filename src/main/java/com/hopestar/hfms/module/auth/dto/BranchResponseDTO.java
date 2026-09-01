@@ -7,10 +7,10 @@ import lombok.NoArgsConstructor;
 
 /**
  * Read-model for a {@link com.hopestar.hfms.module.auth.entity.Branch}.
- * Today's only consumer is the Receipt/Voucher PDF header (office name/
- * address/phone/email) -- kept as a small, generic branch read-model
- * rather than a PDF-specific DTO, so it stays reusable if a future need
- * (e.g. a proper Settings module) wants the same data.
+ * Originally built for just the Receipt/Voucher/Report PDF header (name/
+ * address/phone/email); {@link #website}/{@link #logoPath} were added for
+ * the Organization Settings page, which is exactly the "future need" this
+ * DTO's own earlier Javadoc anticipated reusing it for.
  */
 @Getter
 @Builder
@@ -24,4 +24,6 @@ public class BranchResponseDTO {
     private String address;
     private String phone;
     private String email;
+    private String website;
+    private String logoPath;
 }
