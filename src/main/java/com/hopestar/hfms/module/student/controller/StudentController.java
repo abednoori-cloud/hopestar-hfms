@@ -193,9 +193,23 @@ public class StudentController {
 
     @GetMapping("/{id}/contracts")
     public String contracts(@PathVariable Long id, Model model) {
-        model.addAttribute("student", studentService.getById(id));
+        StudentResponseDTO student = studentService.getById(id);
+        model.addAttribute("student", student);
         model.addAttribute("contracts", studentContractService.listByStudent(id));
-        model.addAttribute("contractCreateDTO", new StudentContractCreateDTO());
+
+        // Defaults the New Contract form's program to the student's own
+        // program (the one they were registered under) -- a mismatch here
+        // was the exact root cause of a real bug found during end-to-end
+        // testing: the dropdown defaulted to blank, and it was easy to
+        // submit a different, wrong, pre-existing program by mistake
+        // instead of the one just created for this student. Still fully
+        // editable -- this is only a safer default for the common case,
+        // not a restriction, since a returning student can genuinely sign
+        // a contract for a different program than their original one.
+        StudentContractCreateDTO contractCreateDTO = new StudentContractCreateDTO();
+        contractCreateDTO.setProgramId(student.getProgram().getId());
+        model.addAttribute("contractCreateDTO", contractCreateDTO);
+
         model.addAttribute("programs", programService.listActive());
         return "students/contracts";
     }
