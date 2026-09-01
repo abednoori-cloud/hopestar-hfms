@@ -41,3 +41,7 @@ logging:
 hfms:
   backup:
     auto-backup-enabled: false   # avoid clutter while developing locally
+    # This machine's MySQL Server 9.7 install -- version-matched to the
+    # running server, unlike the older copy bundled with MySQL Workbench.
+    mysqldump-path: ${HFMS_MYSQLDUMP_PATH:C:/Program Files/MySQL/MySQL Server 9.7/bin/mysqldump.exe}
+    mysql-restore-path: ${HFMS_MYSQL_PATH:C:/Program Files/MySQL/MySQL Server 9.7/bin/mysql.exe}

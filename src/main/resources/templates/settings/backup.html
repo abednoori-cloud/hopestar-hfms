@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(pageTitle='Backup &amp; Restore')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: breadcrumbs(items=${ {
+    {label: 'Dashboard', url: '/dashboard'},
+    {label: 'Backup &amp; Restore', url: null}
+} })}"></div>
+<div th:replace="~{fragments/layout :: flashMessages}"></div>
+
+<div class="container-fluid pb-5">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0"><i class="bi bi-hdd-network me-2"></i>Backup &amp; Restore</h4>
+        <form method="post" th:action="@{/settings/backup}">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-cloud-arrow-down me-1"></i>Backup Now</button>
+        </form>
+    </div>
+
+    <p class="text-muted">
+        Backs up the database only (not uploaded student documents). A nightly automatic backup also runs per the
+        configured schedule. Backup files are stored locally in the server's configured backups folder.
+    </p>
+
+    <div class="card hfms-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hfms table-hover mb-0 align-middle">
+                    <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>Status</th>
+                        <th>Started</th>
+                        <th>Triggered By</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:if="${backups.isEmpty()}">
+                        <td colspan="7" class="text-center text-muted py-4">No backups yet.</td>
+                    </tr>
+                    <tr th:each="backup : ${backups}">
+                        <td th:text="${backup.fileName}"></td>
+                        <td>
+                            <span class="badge" th:classappend="${backup.backupType.name() == 'MANUAL'} ? 'bg-info text-dark' : 'bg-secondary'"
+                                  th:text="${backup.backupType}"></span>
+                        </td>
+                        <td th:text="${backup.fileSizeBytes != null} ? ${#numbers.formatDecimal(backup.fileSizeBytes / 1024.0 / 1024.0, 1, 2)} + ' MB' : '—'"></td>
+                        <td>
+                            <span class="badge" th:classappend="${backup.status.name() == 'SUCCESS'} ? 'bg-success' : 'bg-danger'"
+                                  th:text="${backup.status}"
+                                  th:title="${backup.errorMessage}"></span>
+                        </td>
+                        <td th:text="${#temporals.format(backup.startedAt, 'dd MMM yyyy HH:mm')}"></td>
+                        <td th:text="${backup.triggeredBy} ?: 'system (scheduled)'"></td>
+                        <td class="text-end">
+                            <button th:if="${backup.status.name() == 'SUCCESS'}"
+                                    type="button" class="btn btn-sm btn-outline-warning me-1"
+                                    data-bs-toggle="modal" th:data-bs-target="'#restoreModal-' + ${backup.id}">
+                                <i class="bi bi-arrow-counterclockwise"></i> Restore
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    data-bs-toggle="modal" th:data-bs-target="'#deleteModal-' + ${backup.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Per-row Restore confirmation modals: destructive (overwrites the live database), so a plain click is not
+     enough -- the operator must type RESTORE before the confirm button enables. -->
+<div th:each="backup : ${backups}" th:if="${backup.status.name() == 'SUCCESS'}"
+     class="modal fade" th:id="'restoreModal-' + ${backup.id}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/settings/backup/{id}/restore(id=${backup.id})}"
+              th:id="'restoreForm-' + ${backup.id}">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-1"></i>Restore Database</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will <strong>overwrite the entire live database</strong> with the contents of
+                        <strong th:text="${backup.fileName}"></strong> (backed up
+                        <span th:text="${#temporals.format(backup.startedAt, 'dd MMM yyyy HH:mm')}"></span>).
+                        Any data created or changed since that backup will be permanently lost. This cannot be undone.</p>
+                    <label class="form-label">Type <strong>RESTORE</strong> to confirm</label>
+                    <input type="text" class="form-control" autocomplete="off"
+                           th:oninput="'document.getElementById(\'restoreConfirmBtn-' + ${backup.id} + '\').disabled = (this.value !== \'RESTORE\');'"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger" th:id="'restoreConfirmBtn-' + ${backup.id}" disabled>
+                        Overwrite Database
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Per-row Delete confirmation modals -->
+<div th:each="backup : ${backups}"
+     class="modal fade" th:id="'deleteModal-' + ${backup.id}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="post" th:action="@{/settings/backup/{id}/delete(id=${backup.id})}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Backup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Delete backup file <strong th:text="${backup.fileName}"></strong> and its history entry?
+                        This only removes this backup file, not the database itself.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

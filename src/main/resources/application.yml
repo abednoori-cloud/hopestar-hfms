@@ -82,6 +82,12 @@ hfms:
     auto-backup-cron: "0 0 2 * * *"   # daily at 02:00
     retention-daily: 30
     retention-monthly: 12
+    # Neither tool is guaranteed to be on PATH; default assumes it is
+    # (typical for a Linux prod host with the mysql-client package
+    # installed) and profiles override with an absolute path where
+    # needed -- see application-dev.yml.
+    mysqldump-path: ${HFMS_MYSQLDUMP_PATH:mysqldump}
+    mysql-restore-path: ${HFMS_MYSQL_PATH:mysql}
 
 logging:
   level:
