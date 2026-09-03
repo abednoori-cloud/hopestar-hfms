@@ -24,6 +24,16 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Self-signed HTTPS keystore for the installer build (see the
+             "installer" profile below and application-prod.yml). Only
+             populated when that profile runs; the default build leaves
+             this directory empty and application-prod.yml's @..@ token
+             unresolved, which is intentional: a jar built without
+             -Pinstaller was never meant to serve HTTPS prod. -->
+        <hfms.ssl.keystore.dir>${project.build.directory}/generated-resources/keystore</hfms.ssl.keystore.dir>
+        <hfms.ssl.keystore.file>${hfms.ssl.keystore.dir}/hfms-keystore.p12</hfms.ssl.keystore.file>
+        <hfms.ssl.secret.file>${project.build.directory}/keystore-secret/hfms-keystore.properties</hfms.ssl.secret.file>
     </properties>
 
     <dependencies>
@@ -139,7 +149,48 @@
 
     <build>
         <finalName>hfms</finalName>
+
+        <!-- application-prod.yml is filtered so its @hfms.ssl.keystore.password@
+             token can be replaced with the installer-build-generated password
+             (see the "installer" profile). Everything else is copied
+             unfiltered: Thymeleaf templates use @{...} link-expression
+             syntax that must NOT be touched by resource filtering, and
+             application-prod.yml itself is full of Spring ${...}
+             placeholders (DB_HOST etc.) that must survive filtering too,
+             hence the "@" delimiter override on maven-resources-plugin
+             below instead of the default "${*}". -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>application-prod.yml</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>application-prod.yml</include>
+                </includes>
+                <filtering>true</filtering>
+            </resource>
+            <!-- Populated only when the "installer" profile ran; empty/absent
+                 otherwise, which maven-resources-plugin skips silently. -->
+            <resource>
+                <directory>${hfms.ssl.keystore.dir}</directory>
+            </resource>
+        </resources>
+
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <useDefaultDelimiters>false</useDefaultDelimiters>
+                    <delimiters>
+                        <delimiter>@</delimiter>
+                    </delimiters>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -172,5 +223,73 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Activate with -Pinstaller when building the jar that ships in
+             the jpackage Windows installer. Generates a fresh self-signed
+             HTTPS keystore (scripts/generate-keystore.ps1, via keytool) and
+             its random password, then bakes both into the jar: the
+             keystore as a classpath resource, the password into
+             application-prod.yml via the @hfms.ssl.keystore.password@
+             filter token wired up in <resources> above.
+
+             Deliberately NOT active by default: `mvn clean package` and
+             `mvn spring-boot:run` for normal dev work never invoke keytool
+             and never touch application-prod.yml's SSL settings. -->
+        <profile>
+            <id>installer</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.2.0</version>
+                        <executions>
+                            <execution>
+                                <id>generate-ssl-keystore</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>powershell</executable>
+                                    <arguments>
+                                        <argument>-NoProfile</argument>
+                                        <argument>-ExecutionPolicy</argument>
+                                        <argument>Bypass</argument>
+                                        <argument>-File</argument>
+                                        <argument>${project.basedir}/scripts/generate-keystore.ps1</argument>
+                                        <argument>-KeystorePath</argument>
+                                        <argument>${hfms.ssl.keystore.file}</argument>
+                                        <argument>-PropertiesPath</argument>
+                                        <argument>${hfms.ssl.secret.file}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>properties-maven-plugin</artifactId>
+                        <version>1.2.1</version>
+                        <executions>
+                            <execution>
+                                <id>load-ssl-keystore-password</id>
+                                <phase>generate-resources</phase>
+                                <goals>
+                                    <goal>read-project-properties</goal>
+                                </goals>
+                                <configuration>
+                                    <files>
+                                        <file>${hfms.ssl.secret.file}</file>
+                                    </files>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

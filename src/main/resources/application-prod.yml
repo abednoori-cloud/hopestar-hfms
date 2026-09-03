@@ -26,6 +26,13 @@ spring:
       enabled: false
 
 server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    enabled: true
+    key-store: ${HFMS_SSL_KEYSTORE:classpath:hfms-keystore.p12}
+    key-store-password: ${HFMS_SSL_KEYSTORE_PASSWORD:@hfms.ssl.keystore.password@}
+    key-store-type: PKCS12
+    key-alias: hfms
   error:
     include-message: never
     include-stacktrace: never
@@ -34,7 +41,9 @@ server:
     session:
       cookie:
         secure: true       # requires HTTPS in production, per approved
-                            # Security Architecture §5.4
+                            # Security Architecture §5.4 -- correct as-is
+                            # now that server.ssl is enabled above; do not
+                            # weaken this to make plain HTTP "work".
         http-only: true
         same-site: strict
   forward-headers-strategy: native   # honor X-Forwarded-* when behind a
