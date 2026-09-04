@@ -55,6 +55,23 @@ if (-not $SkipMavenBuild) {
 $jarPath = Join-Path $root 'target\hfms.jar'
 if (-not (Test-Path $jarPath)) { throw "Expected $jarPath after the Maven build but it's missing." }
 
+# spring-boot:repackage renames the pre-repackage plain jar (classes at
+# jar root) to hfms.jar.original before replacing hfms.jar with the fat,
+# BOOT-INF/-nested repackaged one -- documented, long-standing behavior
+# of that plugin goal, not an implementation detail we're relying on by
+# luck. We need that plain jar separately: jpackage's native launcher
+# resolves --main-class via a flat classpath scan of --main-jar, which
+# can't see classes nested under hfms.jar's BOOT-INF/classes/ (confirmed
+# by testing -- `javap -cp hfms.jar com.hopestar.hfms.launcher.Launcher`
+# fails with "class not found", while the same call against
+# hfms.jar.original succeeds). Launcher itself has zero external
+# dependencies (JDK classes only), so this plain jar is all it needs to
+# resolve and run -- it never touches the Spring-annotated classes that
+# jar also happens to contain, which do need BOOT-INF/lib and would fail
+# to link if actually invoked from this classpath.
+$originalJarPath = Join-Path $root 'target\hfms.jar.original'
+if (-not (Test-Path $originalJarPath)) { throw "Expected $originalJarPath (pre-repackage jar) after the Maven build but it's missing." }
+
 # ---------------------------------------------------------------------
 # 2. Icon: jpackage needs a real .ico on Windows (not .jpeg/.png).
 # ---------------------------------------------------------------------
@@ -74,6 +91,12 @@ $stageDir = Join-Path $root 'target\jpackage-input'
 Remove-Item $stageDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
 Copy-Item $jarPath (Join-Path $stageDir 'hfms.jar')
+Copy-Item $originalJarPath (Join-Path $stageDir 'launcher.jar')
+
+# The launcher shells out to this script on first run -- it needs to
+# exist as a real file next to the jars in the installed app, not just
+# in the source tree, since PowerShell -File needs a filesystem path.
+Copy-Item (Join-Path $root 'scripts\install-mysql-headless.ps1') (Join-Path $stageDir 'install-mysql-headless.ps1')
 
 # ---------------------------------------------------------------------
 # 4. Module list for the jlinked runtime -- computed via jdeps against
@@ -104,11 +127,15 @@ $modules = @(
 #    per-user default location, matching the app-data location decision
 #    (%LOCALAPPDATA%\HopeStarHFMS) -- verified against the actual built
 #    output, not assumed (see chat).
-#    --java-options -Dspring.profiles.active=prod: the one piece of
-#    "which environment" wiring that's static (true for every packaged
-#    install, unlike the DB credentials, which don't exist until the
-#    MySQL script runs on the target machine) -- baked in now so the
-#    future launcher doesn't have to set it.
+#    --main-class com.hopestar.hfms.launcher.Launcher: overrides the
+#    jar's own manifest (Main-Class=Spring Boot's JarLauncher) so
+#    jpackage's native launcher runs OUR supervisor first -- it handles
+#    first-run MySQL setup, reads the DB credentials file, and starts
+#    the real Spring Boot app as a child process with that environment
+#    (setting HFMS_PROFILE=prod itself, which is why the old
+#    --java-options -Dspring.profiles.active=prod baked into the outer
+#    launcher's .cfg is gone -- it would only apply to the supervisor's
+#    own JVM, not the child process it spawns).
 # ---------------------------------------------------------------------
 $version = '1.0.0'  # jpackage requires Major[.Minor[.Patch]] -- pom's "-SNAPSHOT" suffix isn't valid here
 $upgradeUuid = '6F912B06-0A9B-4D36-B002-A38B939DB9B6'  # fixed forever -- changing this breaks in-place upgrades
@@ -121,7 +148,8 @@ Write-Step "Running jpackage (--type $Type)..."
 $jpackageArgs = @(
     '--type', $Type
     '--input', $stageDir
-    '--main-jar', 'hfms.jar'
+    '--main-jar', 'launcher.jar'
+    '--main-class', 'com.hopestar.hfms.launcher.Launcher'
     '--dest', $destDir
     '--name', 'HopeStar HFMS'
     '--app-version', $version
@@ -129,7 +157,13 @@ $jpackageArgs = @(
     '--description', 'Finance and student management system for HopeStar Education Consultancy'
     '--icon', $icoPath
     '--add-modules', $modules
-    '--java-options', '-Dspring.profiles.active=prod'
+    # jpackage's default --jlink-options includes --strip-native-commands,
+    # which removes java.exe/javaw.exe from the bundled runtime (its own
+    # native launcher doesn't need them -- it links the JVM directly).
+    # Our Launcher needs javaw.exe to spawn the real Spring Boot app as a
+    # child process, so every other jpackage default is kept except that
+    # one (confirmed missing at runtime/bin -- see chat).
+    '--jlink-options', '--strip-debug --no-header-files --no-man-pages'
 )
 if ($Type -ne 'app-image') {
     $jpackageArgs += @(
