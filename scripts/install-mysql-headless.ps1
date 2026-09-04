@@ -1,0 +1,333 @@
+<#
+    Headless MySQL provisioning for the HFMS installer.
+
+    Ensures a standard (non-portable) MySQL Server install exists on the
+    machine, is registered as a real Windows service, and that the
+    hfms_prod database + hfms_user account exist with a known password --
+    all without ever showing the operator a MySQL wizard.
+
+    Safe to re-run: each phase checks current state before acting, so a
+    partial or repeat run does not error out or clobber a working setup.
+
+    Must be run from an elevated (Administrator) PowerShell prompt -- both
+    msiexec targeting Program Files and `mysqld --install` require it.
+#>
+[CmdletBinding()]
+param(
+    [string]$MySqlVersion = '9.7',
+
+    # Only required if MySQL is not already installed on this machine.
+    [string]$MsiPath,
+
+    [string]$InstallDir = "C:\Program Files\MySQL\MySQL Server $MySqlVersion",
+    [string]$DataDir    = "C:\ProgramData\MySQL\MySQL Server $MySqlVersion\Data",
+    [string]$ServiceName = "MySQL$($MySqlVersion -replace '\.', '')",
+    [int]$Port = 3306,
+
+    [string]$DbName = 'hfms_prod',
+    [string]$DbUser = 'hfms_user',
+    [string]$DbUserHost = 'localhost',
+
+    # Placeholder until the launcher work wires up the real app-data
+    # location (see application.yml's HFMS_* env vars for the pattern).
+    [string]$CredentialsPath = "$env:LOCALAPPDATA\HopeStarHFMS\config\db.properties",
+
+    # Only needed when MySQL was already installed by something other
+    # than a prior run of this script, so its root password is unknown
+    # to us and can't be recovered from $CredentialsPath.
+    [string]$RootPassword,
+
+    # The admin account used for CREATE DATABASE/CREATE USER/GRANT once a
+    # server is up. Always 'root' in production; overridable so this
+    # script can be exercised against an already-installed server using
+    # a different admin-privileged account without ever touching root.
+    [string]$RootUser = 'root'
+)
+
+$ErrorActionPreference = 'Stop'
+
+function Write-Step($msg) { Write-Host "[install-mysql-headless] $msg" -ForegroundColor Cyan }
+
+function New-RandomPassword {
+    # 24 chars, alnum-only so it's always safe to embed in a SQL literal
+    # or an option file without quoting/escaping concerns. Uses
+    # RNGCryptoServiceProvider rather than RandomNumberGenerator.Fill --
+    # the latter is .NET 6+ only and isn't available under Windows
+    # PowerShell 5.1's .NET Framework runtime.
+    $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+    try {
+        $result = ''
+        while ($result.Length -lt 24) {
+            $bytes = New-Object byte[] 24
+            $rng.GetBytes($bytes)
+            $result += ([Convert]::ToBase64String($bytes) -replace '[^a-zA-Z0-9]', '')
+        }
+        return $result.Substring(0, 24)
+    } finally {
+        $rng.Dispose()
+    }
+}
+
+# Runs a SQL string against $exe using a short-lived --defaults-extra-file
+# so the password never appears on the command line (visible in the
+# process list) or gets echoed to a transcript/log.
+function Invoke-MySqlSql {
+    param(
+        [Parameter(Mandatory)][string]$Exe,
+        [Parameter(Mandatory)][string]$User,
+        [string]$Password = '',
+        [Parameter(Mandatory)][string]$Sql,
+        [int]$ConnectPort = $Port
+    )
+    $optFile = [System.IO.Path]::GetTempFileName()
+    try {
+        @(
+            '[client]'
+            "user=$User"
+            "password=$Password"
+            "port=$ConnectPort"
+            'host=127.0.0.1'
+        ) | Set-Content -Path $optFile -Encoding ASCII
+
+        # Pipe the SQL over stdin rather than using the client's `source`
+        # meta-command -- `source` on this client mis-parses a Windows
+        # temp path's backslashes as client escape sequences.
+        $output = $Sql | & $Exe "--defaults-extra-file=$optFile" --batch --silent 2>&1
+        $exitCode = $LASTEXITCODE
+        if ($exitCode -ne 0) {
+            throw "mysql client exited $exitCode`: $output"
+        }
+        return $output
+    } finally {
+        Remove-Item $optFile -ErrorAction SilentlyContinue
+    }
+}
+
+function Test-MySqlAuth {
+    param([string]$Exe, [string]$User, [string]$Password, [int]$ConnectPort = $Port)
+    try {
+        Invoke-MySqlSql -Exe $Exe -User $User -Password $Password -Sql 'SELECT 1;' -ConnectPort $ConnectPort | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Read-CredentialsFile {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $null }
+    $result = @{}
+    Get-Content $Path | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_]+)\s*=\s*(.*)$') {
+            $result[$Matches[1]] = $Matches[2]
+        }
+    }
+    return $result
+}
+
+function Write-CredentialsFile {
+    param([string]$Path, [string]$DbPw)
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    @(
+        "# Generated by install-mysql-headless.ps1 -- do not commit or log this file."
+        "# Deliberately contains no root/admin credential -- see the root-"
+        "# credential resolution comment near the top of this script's main body."
+        "DB_HOST=127.0.0.1"
+        "DB_PORT=$Port"
+        "DB_NAME=$DbName"
+        "DB_USERNAME=$DbUser"
+        "DB_PASSWORD=$DbPw"
+    ) | Set-Content -Path $Path -Encoding ASCII
+    # Best-effort lock-down: this file holds live DB credentials.
+    try {
+        icacls $Path /inheritance:r | Out-Null
+        icacls $Path /grant:r "$($env:USERNAME):(R,W)" "SYSTEM:(F)" "Administrators:(F)" | Out-Null
+    } catch {
+        Write-Warning "Could not restrict ACLs on $Path -- verify permissions manually."
+    }
+}
+
+# ---------------------------------------------------------------------
+# 1. Detect an existing install (service + registry), independent of
+#    whatever $ServiceName/$InstallDir/$DataDir defaults were guessed --
+#    a real pre-existing install may not match them.
+# ---------------------------------------------------------------------
+Write-Step "Checking for an existing MySQL Server install..."
+
+$existingService = Get-Service | Where-Object {
+    $_.Name -like 'MySQL*' -or $_.DisplayName -like 'MySQL*Server*'
+} | Select-Object -First 1
+
+$registryEntry = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -like 'MySQL Server*' } |
+    Select-Object -First 1
+
+$alreadyInstalled = [bool]($existingService -and $registryEntry)
+
+if ($alreadyInstalled) {
+    Write-Step "Found existing install: service '$($existingService.Name)', registry '$($registryEntry.DisplayName) $($registryEntry.DisplayVersion)' at '$($registryEntry.InstallLocation)'."
+    $ServiceName = $existingService.Name
+    if ($registryEntry.InstallLocation) { $InstallDir = $registryEntry.InstallLocation.TrimEnd('\') }
+
+    $iniCandidate = Join-Path $InstallDir 'my.ini'
+    if (-not (Test-Path $iniCandidate)) { $iniCandidate = "C:\ProgramData\MySQL\MySQL Server $MySqlVersion\my.ini" }
+    if (Test-Path $iniCandidate) {
+        $datadirLine = Get-Content $iniCandidate | Where-Object { $_ -match '^\s*datadir\s*=' } | Select-Object -First 1
+        if ($datadirLine -match '^\s*datadir\s*=\s*(.+)$') {
+            $DataDir = ($Matches[1].Trim() -replace '/', '\')
+        }
+        $portLine = Get-Content $iniCandidate | Where-Object { $_ -match '^\s*port\s*=\s*\d+\s*$' } | Select-Object -First 1
+        if ($portLine -match '^\s*port\s*=\s*(\d+)\s*$') { $Port = [int]$Matches[1] }
+    }
+} else {
+    Write-Step "No existing MySQL Server install detected."
+}
+
+$mysqldExe = Join-Path $InstallDir 'bin\mysqld.exe'
+$mysqlExe  = Join-Path $InstallDir 'bin\mysql.exe'
+
+# ---------------------------------------------------------------------
+# 2. Fresh install: silent MSI, then initialize + register the service.
+#    Skipped entirely when $alreadyInstalled.
+# ---------------------------------------------------------------------
+$freshlyInitialized = $false
+
+if (-not $alreadyInstalled) {
+    if (-not $MsiPath -or -not (Test-Path $MsiPath)) {
+        throw "MySQL is not installed on this machine and -MsiPath was not given (or doesn't exist). Supply the MySQL Server $MySqlVersion Windows MSI to proceed."
+    }
+
+    Write-Step "Running silent MSI install from '$MsiPath'..."
+    $logFile = Join-Path $env:TEMP 'mysql-msi-install.log'
+    $msiArgs = @('/i', "`"$MsiPath`"", '/qn', '/lv', "`"$logFile`"", "INSTALLDIR=`"$InstallDir`"")
+    $proc = Start-Process msiexec.exe -ArgumentList $msiArgs -Wait -PassThru -Verb RunAs
+    if ($proc.ExitCode -notin 0, 3010) {
+        throw "msiexec failed with exit code $($proc.ExitCode). See $logFile."
+    }
+    Write-Step "MSI install complete (exit $($proc.ExitCode))."
+
+    if (-not (Test-Path $mysqldExe)) {
+        throw "Expected mysqld.exe at '$mysqldExe' after install but it's missing -- MSI layout may differ from what this script assumes."
+    }
+
+    # Standard binary MSI does not create/initialize a data directory or
+    # write a persistent option file -- that's normally MySQL
+    # Configurator's job, which we're deliberately bypassing.
+    if (-not (Test-Path $DataDir)) {
+        New-Item -ItemType Directory -Path $DataDir -Force | Out-Null
+    }
+
+    $iniPath = Join-Path $InstallDir 'my.ini'
+    @(
+        '[mysqld]'
+        "basedir=$($InstallDir -replace '\\','/')"
+        "datadir=$($DataDir -replace '\\','/')"
+        "port=$Port"
+    ) | Set-Content -Path $iniPath -Encoding ASCII
+
+    Write-Step "Initializing data directory (mysqld --initialize-insecure)..."
+    & $mysqldExe "--defaults-file=$iniPath" --initialize-insecure --console 2>&1 | Write-Verbose
+    if ($LASTEXITCODE -ne 0) { throw "mysqld --initialize-insecure failed with exit code $LASTEXITCODE." }
+    $freshlyInitialized = $true
+
+    Write-Step "Registering Windows service '$ServiceName'..."
+    & $mysqldExe --install $ServiceName "--defaults-file=$iniPath" 2>&1 | Write-Verbose
+    if ($LASTEXITCODE -ne 0) { throw "mysqld --install failed with exit code $LASTEXITCODE." }
+
+    Set-Service -Name $ServiceName -StartupType Automatic
+}
+
+# ---------------------------------------------------------------------
+# 3. Make sure the service is actually running.
+# ---------------------------------------------------------------------
+$svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+if (-not $svc) { throw "Service '$ServiceName' not found after setup -- something went wrong." }
+if ($svc.Status -ne 'Running') {
+    Write-Step "Starting service '$ServiceName'..."
+    Start-Service -Name $ServiceName
+    $svc.WaitForStatus('Running', (New-TimeSpan -Seconds 30))
+}
+
+# Give a freshly-started server a moment to actually accept connections
+# (service Running != accepting connections yet).
+if ($freshlyInitialized) {
+    $deadline = (Get-Date).AddSeconds(30)
+    $ready = $false
+    while ((Get-Date) -lt $deadline) {
+        if (Test-MySqlAuth -Exe $mysqlExe -User 'root' -Password '' -ConnectPort $Port) { $ready = $true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $ready) { throw "MySQL service started but did not accept a root connection within 30s of a fresh initialize." }
+}
+
+# ---------------------------------------------------------------------
+# 4. Resolve a working root credential for this run.
+#    Precedence: freshly-initialized (blank) root > -RootPassword param >
+#    give up with a clear error.
+#
+#    Deliberately no "previously-saved root password on disk" branch: the
+#    root/admin password is never written anywhere by this script (see
+#    Write-CredentialsFile) and lives only in $rootPw for the duration of
+#    this process. That means every re-run that needs admin access (e.g.
+#    to self-heal a stale hfms_user password) must be given -RootPassword
+#    again -- accepted tradeoff for a one-time setup tool, not something
+#    meant to be re-run routinely.
+# ---------------------------------------------------------------------
+Write-Step "Resolving root credentials..."
+
+$existingCreds = Read-CredentialsFile -Path $CredentialsPath
+$rootPw = $null
+
+if ($freshlyInitialized) {
+    $rootPw = New-RandomPassword
+    Invoke-MySqlSql -Exe $mysqlExe -User 'root' -Password '' -Sql "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootPw';" | Out-Null
+    Write-Step "Root password set for the freshly-initialized server."
+} elseif ($RootPassword -and (Test-MySqlAuth -Exe $mysqlExe -User $RootUser -Password $RootPassword -ConnectPort $Port)) {
+    $rootPw = $RootPassword
+    Write-Step "Authenticated as '$RootUser' using the supplied -RootPassword."
+} else {
+    throw "MySQL is already installed but this script has no working admin credential for it -- root/admin passwords are never persisted to disk by design. Pass -RootPassword explicitly."
+}
+
+# ---------------------------------------------------------------------
+# 5. Ensure hfms_prod exists.
+# ---------------------------------------------------------------------
+Write-Step "Ensuring database '$DbName' exists..."
+Invoke-MySqlSql -Exe $mysqlExe -User $RootUser -Password $rootPw -Sql "CREATE DATABASE IF NOT EXISTS ``$DbName`` CHARACTER SET utf8mb4;" | Out-Null
+
+# ---------------------------------------------------------------------
+# 6. Ensure hfms_user exists with a password we actually know. If a
+#    credentials file already has one that still authenticates, leave it
+#    alone (true no-op). Otherwise (missing user, missing/stale
+#    credentials file) generate a fresh password and realign both the
+#    server and the credentials file to it.
+# ---------------------------------------------------------------------
+Write-Step "Ensuring user '$DbUser'@'$DbUserHost' exists with a known-good password..."
+
+$dbPw = $null
+if ($existingCreds -and $existingCreds.DB_PASSWORD -and (Test-MySqlAuth -Exe $mysqlExe -User $DbUser -Password $existingCreds.DB_PASSWORD -ConnectPort $Port)) {
+    $dbPw = $existingCreds.DB_PASSWORD
+    Write-Step "Existing '$DbUser' credentials still work -- leaving password unchanged."
+} else {
+    $dbPw = New-RandomPassword
+    Invoke-MySqlSql -Exe $mysqlExe -User $RootUser -Password $rootPw -Sql @"
+CREATE USER IF NOT EXISTS '$DbUser'@'$DbUserHost' IDENTIFIED BY '$dbPw';
+ALTER USER '$DbUser'@'$DbUserHost' IDENTIFIED BY '$dbPw';
+"@ | Out-Null
+    Write-Step "Generated and set a new password for '$DbUser'."
+}
+
+Invoke-MySqlSql -Exe $mysqlExe -User $RootUser -Password $rootPw -Sql @"
+GRANT ALL PRIVILEGES ON ``$DbName``.* TO '$DbUser'@'$DbUserHost';
+FLUSH PRIVILEGES;
+"@ | Out-Null
+
+# ---------------------------------------------------------------------
+# 7. Persist only the app's own hfms_user credentials -- $rootPw is never
+#    written anywhere and goes out of scope when the script exits.
+# ---------------------------------------------------------------------
+Write-Step "Writing credentials to '$CredentialsPath'..."
+Write-CredentialsFile -Path $CredentialsPath -DbPw $dbPw
+
+Write-Step "Done. Service '$ServiceName' is running; '$DbName' and '$DbUser'@'$DbUserHost' are ready."
