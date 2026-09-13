@@ -46,6 +46,13 @@ logs/
 .env.*
 application-local.yml
 application-secrets.yml
+*.p12
+*.jks
+*.pem
+*.pfx
+
+# ---- Claude Code local session files ----
+.claude/
 
 # ---- Flyway ----
 # (migrations themselves ARE committed; this only ignores ad-hoc local
