@@ -5,11 +5,16 @@ test registrations, employee finance (salary/loans/advances), office expenses,
 PDF receipts/vouchers, reporting, and backup/restore — built on the approved
 Software Architecture & Implementation Plan.
 
-> **Status:** Phase 1 — Project Foundation.
-> Identity/security schema, configuration, and cross-cutting infrastructure
-> are in place. Feature modules (Student, English Test, Finance, Report,
-> Backup, Settings) are implemented incrementally in later phases,
-> per the approved architecture's package structure and module boundaries.
+> **Status:** Feature-complete and deployed.
+> All modules in the approved architecture are implemented, tested, and
+> working — Authentication/Security, Student Management, Finance Foundation
+> (currencies, payment methods, ledger), Student Payments, English Test
+> Management, Employee Management, Salary Management, Employee Loans,
+> Employee Advances, Expenses, PDF Receipts & Vouchers, Reports (with PDF
+> export), Backup & Restore, and Settings/System Configuration. Packaged as
+> a Windows installer with an automated launcher, and has been deployed to
+> a real end user's machine. See [§11](#11-known-limitations--outstanding-work)
+> for what's still outstanding.
 
 ---
 
@@ -49,18 +54,27 @@ hopestar-hfms/
 │   ├── common/               # BaseEntity, shared enums, DTOs, exceptions, utils
 │   ├── security/              # UserPrincipal, CustomUserDetailsService
 │   ├── audit/                 # AuditLog entity + JPA entity listener
-│   ├── scheduler/              # Scheduled jobs (backup, reminders — later phases)
+│   ├── scheduler/              # Scheduled jobs (automatic backups, etc.)
+│   ├── launcher/               # Windows installer launcher: MySQL setup
+│   │                            # detection, elevation, health-check polling,
+│   │                            # browser auto-open, system tray icon
 │   └── module/
-│       └── auth/                # User, Role, Permission, RolePermission, Branch
-│           (dashboard/, student/, englishtest/, finance/, report/,
-│            backup/, settings/ modules are added in subsequent phases)
+│       ├── auth/                # User, Role, Permission, RolePermission,
+│       │                         # Branch, organization settings
+│       ├── dashboard/            # Dashboard summary views
+│       ├── student/              # Student records + English test registrations
+│       ├── finance/              # ledger, studentpayment, employee, salary,
+│       │                         # loan, advance, expense
+│       ├── reports/              # Cashflow, student, employee reports (PDF export)
+│       └── backup/               # Manual + schedulable automatic backup/restore
 └── src/main/resources/
     ├── application.yml, application-dev.yml, application-prod.yml
-    └── db/migration/V1__init.sql
+    └── db/migration/
 ```
 
 This mirrors the package structure agreed in the approved architecture
-document exactly — no packages have been renamed, removed, or restructured.
+document — no packages have been renamed, removed, or restructured from
+what was originally planned.
 
 ## 4. Configuration
 
@@ -124,9 +138,8 @@ Seeded by `V1__init.sql` for first login only:
 | Password | `Admin@123` |
 
 `must_change_password` is set to `true` on this seed row — the login flow
-implemented in Phase 2 (Module 1: Authentication) is required to force a
-password change on first login before granting access to the rest of the
-system. **Change this password immediately in any non-throwaway
+forces a password change on first login before granting access to the rest
+of the system. **Change this password immediately in any non-throwaway
 environment.**
 
 ## 8. Database Migrations
@@ -142,22 +155,36 @@ New migrations go in `src/main/resources/db/migration/`, named
 
 - Passwords hashed with BCrypt, strength 12.
 - CSRF protection is enabled by default (Thymeleaf's Spring Security
-  dialect auto-injects tokens into `<form>` elements once the auth module's
-  templates are added in Phase 2).
+  dialect auto-injects tokens into all `<form>` elements).
 - Accounts lock automatically after 5 failed login attempts
   (`hfms.security.max-failed-login-attempts`).
 - Role/permission tables are live in the schema from day one even though
   only the `ADMIN` role exists at go-live — adding `ACCOUNTANT`/`STAFF`
-  roles later (per the Future Modules roadmap) is a data change, not a
-  schema or code change.
+  roles later is a data change, not a schema or code change.
+- HTTPS is supported for production/installer builds via a self-signed
+  certificate generated at build time with `keytool` (the dev workflow
+  itself is unaffected and still runs over plain HTTP).
 
-## 10. What's Next (Phase 2+)
+## 10. Windows Installer
 
-Per the approved architecture, subsequent phases add, module by module:
-`module/dashboard`, `module/student`, `module/englishtest`,
-`module/finance` (ledger, student payments, employee, salary, loan,
-advance, expense, refund, PDF receipts/vouchers), `module/report`,
-`module/backup`, `module/settings`, plus the Thymeleaf templates,
-Controllers, and Services for each. No changes to this foundation
-(package structure, database design, or configuration) are expected as
-those phases land.
+A jpackage-based Windows installer bundles the app with an automated
+launcher that, on first run, detects whether MySQL is installed, requests
+elevation when needed, runs headless MySQL installation/initialization
+(root password is never persisted to disk), polls the app's health-check
+endpoint until it's up, and then opens the default browser to the app —
+with a system tray icon for subsequent launches. This has been deployed
+once, successfully, to a real end user's fresh Windows machine.
+
+## 11. Known Limitations / Outstanding Work
+
+- **Backup path configurability** — the backup feature's `mysqldump`/`mysql`
+  invocation currently assumes the path used during development. On an
+  installation where MySQL is installed to a different path, backups can
+  fail until this is made configurable or auto-detected per-installation.
+- **No bulk "reset to empty" tool** — there's currently no safe way for a
+  customer to clear out test data in bulk when transitioning from testing
+  to real production use.
+- **Hardening is ongoing, not a discrete phase** — this project was not
+  built in the phase sequence originally planned; instead, hardening and
+  polish have happened continuously alongside feature work, and continue
+  to happen as issues surface in real use.
