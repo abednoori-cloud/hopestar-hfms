@@ -18,6 +18,36 @@ Software Architecture & Implementation Plan.
 
 ---
 
+## Screenshots
+
+**Dashboard** — cashflow summary, outstanding student payments, salary
+overview, employee loans/advances, expenses, and recent ledger activity at
+a glance.
+
+![Dashboard](docs/screenshots/Dashboard.png)
+
+**Student Management** — searchable/filterable student list with program,
+destination country, status, and contract counts.
+
+![Students list](docs/screenshots/Students.png)
+
+**Employee Management** — searchable/filterable employee directory with
+department, position, joining date, base salary, and status.
+
+![Employee list](docs/screenshots/Employee.png)
+
+**Reports** — Money In/Out (cashflow), Student, and Employee reports, each
+with PDF export.
+
+![Reports](docs/screenshots/Reports.png)
+
+**PDF Receipt** — generated payment receipt showing student, contract,
+payment method, amount, and remaining contract balance.
+
+![Payment receipt PDF](docs/screenshots/Receipt.png)
+
+---
+
 ## 1. Technology Stack
 
 | Layer | Technology |
