@@ -309,6 +309,12 @@ public final class Launcher {
                     "Please contact support. Technical details were saved in:\n" + logDir);
             }
         }
+        // MYSQL_BIN_DIR is optional, not required like the DB_* keys above --
+        // it's only present in db.properties written by a version of
+        // install-mysql-headless.ps1 new enough to record it. An existing
+        // install from before that change simply won't have it, and
+        // MysqlToolLocator's runtime scan (see BackupConfig) is what covers
+        // that case instead.
         return props;
     }
 
@@ -325,6 +331,12 @@ public final class Launcher {
         pb.environment().put("DB_NAME", creds.getProperty("DB_NAME"));
         pb.environment().put("DB_USERNAME", creds.getProperty("DB_USERNAME"));
         pb.environment().put("DB_PASSWORD", creds.getProperty("DB_PASSWORD"));
+
+        String mysqlBinDir = creds.getProperty("MYSQL_BIN_DIR");
+        if (mysqlBinDir != null && !mysqlBinDir.isBlank()) {
+            pb.environment().put("HFMS_MYSQLDUMP_PATH", Paths.get(mysqlBinDir, "mysqldump.exe").toString());
+            pb.environment().put("HFMS_MYSQL_PATH", Paths.get(mysqlBinDir, "mysql.exe").toString());
+        }
 
         Path appLog = logDir.resolve("app.log");
         pb.redirectOutput(ProcessBuilder.Redirect.appendTo(appLog.toFile()));

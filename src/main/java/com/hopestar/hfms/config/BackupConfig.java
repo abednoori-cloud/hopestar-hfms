@@ -17,6 +17,15 @@ import java.nio.file.Path;
  * logs a startup warning rather than failing the whole application to
  * start, which matters most in dev where the feature may be exercised
  * rarely.
+ * <p>
+ * Before warning, first runs each configured path through {@link
+ * MysqlToolLocator}, which -- on Windows only -- auto-detects the real
+ * install location when the configured value is still a bare command name
+ * that isn't actually on {@code PATH}. This is what lets an existing
+ * packaged install self-heal from an app update alone, without needing
+ * {@code install-mysql-headless.ps1} to be rerun (its {@code
+ * MYSQL_BIN_DIR} write into {@code db.properties} only benefits fresh
+ * installs going forward).
  */
 @Slf4j
 @Configuration
@@ -28,6 +37,11 @@ public class BackupConfig {
 
     @PostConstruct
     public void checkExecutables() {
+        backupProperties.setMysqldumpPath(
+                MysqlToolLocator.resolve("mysqldump", backupProperties.getMysqldumpPath()));
+        backupProperties.setMysqlRestorePath(
+                MysqlToolLocator.resolve("mysql", backupProperties.getMysqlRestorePath()));
+
         warnIfMissing("mysqldump", backupProperties.getMysqldumpPath());
         warnIfMissing("mysql", backupProperties.getMysqlRestorePath());
     }

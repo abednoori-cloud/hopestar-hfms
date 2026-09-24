@@ -126,7 +126,7 @@ function Read-CredentialsFile {
 }
 
 function Write-CredentialsFile {
-    param([string]$Path, [string]$DbPw)
+    param([string]$Path, [string]$DbPw, [string]$BinDir)
     $dir = Split-Path $Path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     @(
@@ -138,6 +138,13 @@ function Write-CredentialsFile {
         "DB_NAME=$DbName"
         "DB_USERNAME=$DbUser"
         "DB_PASSWORD=$DbPw"
+        # The bin\ directory holding mysqldump.exe/mysql.exe for THIS
+        # install -- resolved above from either the fresh MSI install
+        # location or the pre-existing install's registry entry, so it's
+        # correct regardless of MySQL version. Launcher.java reads this to
+        # point Backup & Restore at the right executables without the app
+        # ever having to guess or hardcode a version-specific path.
+        "MYSQL_BIN_DIR=$BinDir"
     ) | Set-Content -Path $Path -Encoding ASCII
     # Best-effort lock-down: this file holds live DB credentials.
     try {
@@ -328,6 +335,7 @@ FLUSH PRIVILEGES;
 #    written anywhere and goes out of scope when the script exits.
 # ---------------------------------------------------------------------
 Write-Step "Writing credentials to '$CredentialsPath'..."
-Write-CredentialsFile -Path $CredentialsPath -DbPw $dbPw
+$mysqlBinDir = Split-Path $mysqlExe -Parent
+Write-CredentialsFile -Path $CredentialsPath -DbPw $dbPw -BinDir $mysqlBinDir
 
 Write-Step "Done. Service '$ServiceName' is running; '$DbName' and '$DbUser'@'$DbUserHost' are ready."
